@@ -1,0 +1,1558 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Accident Severity Predictor & Route Risk</title>
+
+  <!-- Leaflet CSS for Map selection & Hotspots (with CDN fallback) -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css" />
+
+  <style>
+    :root {
+      --primary: #2563eb;
+      --primary-hover: #1d4ed8;
+      --primary-light: rgba(37, 99, 235, 0.15);
+      --bg-dark: rgba(15, 23, 42, 0.90);
+      --card-bg: rgba(30, 41, 59, 0.88);
+      --card-border: rgba(255, 255, 255, 0.12);
+      --input-bg: rgba(15, 23, 42, 0.70);
+      --input-border: rgba(148, 163, 184, 0.3);
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+      --accent-green: #10b981;
+      --accent-amber: #f59e0b;
+      --accent-red: #ef4444;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Segoe UI', system-ui, -apple-system, BlinkMacSystemFont, Roboto, sans-serif;
+      min-height: 100vh;
+      color: var(--text-main);
+      /* Fixed constant accident background image */
+      background: 
+        linear-gradient(135deg, rgba(15, 23, 42, 0.86), rgba(15, 23, 42, 0.94)),
+        url('https://images.unsplash.com/photo-1543393716-375f47996a77?w=1600&q=80') no-repeat center center fixed;
+      background-size: cover;
+      background-attachment: fixed;
+      padding: 40px 16px;
+      line-height: 1.5;
+    }
+
+    .container {
+      max-width: 980px;
+      margin: 0 auto;
+      background: var(--card-bg);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid var(--card-border);
+      border-radius: 18px;
+      padding: 32px;
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.70);
+    }
+
+    header {
+      margin-bottom: 20px;
+      text-align: center;
+    }
+
+    .badge-header {
+      display: inline-block;
+      padding: 4px 12px;
+      background: var(--primary-light);
+      border: 1px solid rgba(59, 130, 246, 0.4);
+      color: #60a5fa;
+      border-radius: 9999px;
+      font-size: 13px;
+      font-weight: 600;
+      letter-spacing: 0.5px;
+      margin-bottom: 10px;
+      text-transform: uppercase;
+    }
+
+    h1 {
+      font-size: 28px;
+      font-weight: 700;
+      color: #ffffff;
+      margin-bottom: 8px;
+      letter-spacing: -0.5px;
+    }
+
+    .subtitle {
+      color: var(--text-muted);
+      font-size: 15px;
+    }
+
+    /* Guaranteed visible car collision showcase banner */
+    .banner-container {
+      position: relative;
+      width: 100%;
+      height: 200px;
+      border-radius: 14px;
+      overflow: hidden;
+      margin-bottom: 22px;
+      border: 1px solid var(--card-border);
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+      background: #0f172a;
+    }
+
+    .hero-banner {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+      transition: transform 0.3s ease;
+    }
+
+    .banner-container:hover .hero-banner {
+      transform: scale(1.02);
+    }
+
+    .banner-overlay {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      padding: 12px 18px;
+      background: linear-gradient(to top, rgba(15, 23, 42, 0.95), transparent);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .banner-title {
+      font-size: 14px;
+      font-weight: 600;
+      color: #f1f5f9;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    /* Exactly two tabs */
+    .tabs {
+      display: flex;
+      gap: 10px;
+      margin: 20px 0 16px 0;
+      background: rgba(15, 23, 42, 0.55);
+      padding: 6px;
+      border-radius: 12px;
+      border: 1px solid var(--card-border);
+    }
+
+    .tab-button {
+      flex: 1;
+      padding: 12px 20px;
+      border: 0;
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: 600;
+      font-size: 15px;
+      background: transparent;
+      color: var(--text-muted);
+      transition: all 0.2s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+
+    .tab-button:hover {
+      color: #ffffff;
+      background: rgba(255, 255, 255, 0.05);
+    }
+
+    .tab-button.active {
+      background: var(--primary);
+      color: #ffffff;
+      box-shadow: 0 4px 12px rgba(37, 99, 235, 0.4);
+    }
+
+    .primary-btn {
+      padding: 12px 24px;
+      border: 0;
+      border-radius: 10px;
+      cursor: pointer;
+      background: var(--primary);
+      color: white;
+      font-weight: 600;
+      font-size: 15px;
+      transition: all 0.2s ease;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      box-shadow: 0 4px 14px rgba(37, 99, 235, 0.35);
+    }
+
+    .primary-btn:hover {
+      background: var(--primary-hover);
+      transform: translateY(-1px);
+      box-shadow: 0 6px 20px rgba(37, 99, 235, 0.45);
+    }
+
+    #status {
+      margin-top: 10px;
+      padding: 10px 14px;
+      border-radius: 8px;
+      background: rgba(15, 23, 42, 0.6);
+      border: 1px solid var(--card-border);
+      font-size: 13.5px;
+      color: #93c5fd;
+    }
+
+    /* Google Map & Interactive Route section */
+    .route-section {
+      background: rgba(15, 23, 42, 0.60);
+      border: 1px solid var(--card-border);
+      border-radius: 14px;
+      padding: 20px;
+      margin-top: 20px;
+      margin-bottom: 24px;
+    }
+
+    .route-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-bottom: 12px;
+    }
+
+    .route-header h3 {
+      font-size: 17px;
+      font-weight: 600;
+      color: #93c5fd;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    /* Hotspot toggle & region filter controls */
+    .hotspot-controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 12px;
+      align-items: center;
+    }
+
+    .hotspot-toggle-btn {
+      padding: 8px 16px;
+      border: 1px solid rgba(239, 68, 68, 0.5);
+      border-radius: 8px;
+      cursor: pointer;
+      background: rgba(239, 68, 68, 0.15);
+      color: #fca5a5;
+      font-size: 13px;
+      font-weight: 600;
+      transition: all 0.2s ease;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .hotspot-toggle-btn:hover {
+      background: rgba(239, 68, 68, 0.3);
+      color: white;
+    }
+
+    .hotspot-toggle-btn.active {
+      background: rgba(239, 68, 68, 0.7);
+      color: white;
+      border-color: #ef4444;
+      box-shadow: 0 0 12px rgba(239, 68, 68, 0.4);
+    }
+
+    .region-btn {
+      padding: 6px 14px;
+      border: 1px solid var(--input-border);
+      border-radius: 6px;
+      cursor: pointer;
+      background: rgba(51, 65, 85, 0.5);
+      color: var(--text-muted);
+      font-size: 12px;
+      font-weight: 500;
+      transition: all 0.2s ease;
+    }
+
+    .region-btn:hover {
+      background: rgba(71, 85, 105, 0.7);
+      color: white;
+    }
+
+    .region-btn.active-region {
+      background: var(--primary);
+      color: white;
+      border-color: var(--primary);
+      font-weight: 600;
+    }
+
+    .hotspot-count {
+      font-size: 12px;
+      color: #93c5fd;
+      margin-left: auto;
+      font-weight: 500;
+    }
+
+    #map {
+      height: 420px;
+      width: 100%;
+      border-radius: 10px;
+      border: 1px solid var(--card-border);
+      z-index: 10;
+      box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.4);
+      background: #1e293b;
+    }
+
+    .map-hint {
+      font-size: 12.5px;
+      color: var(--text-muted);
+      margin-top: 10px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .maps-link-wrapper {
+      margin-top: 10px;
+      font-size: 13.5px;
+    }
+
+    .maps-link {
+      color: #60a5fa;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-weight: 500;
+      transition: color 0.2s;
+    }
+
+    .maps-link:hover {
+      color: #93c5fd;
+      text-decoration: underline;
+    }
+
+    /* ETA telemetry card */
+    .eta-dashboard {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 12px;
+      margin-top: 16px;
+      padding-top: 16px;
+      border-top: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    .eta-box {
+      background: rgba(30, 41, 59, 0.7);
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      padding: 12px 14px;
+      border-radius: 10px;
+    }
+
+    .eta-label {
+      font-size: 12px;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 4px;
+    }
+
+    .eta-value {
+      font-size: 18px;
+      font-weight: 700;
+      color: #38bdf8;
+    }
+
+    .eta-value.highlight {
+      color: #34d399;
+    }
+
+    /* Form grids */
+    .section-title {
+      font-size: 18px;
+      font-weight: 600;
+      color: #e2e8f0;
+      margin: 28px 0 14px 0;
+      padding-bottom: 8px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 16px;
+    }
+
+    label {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      font-size: 13.5px;
+      font-weight: 500;
+      color: #cbd5e1;
+    }
+
+    input, select {
+      padding: 10px 12px;
+      border: 1px solid var(--input-border);
+      border-radius: 8px;
+      background: var(--input-bg);
+      color: #ffffff;
+      font-size: 14px;
+      transition: all 0.2s ease;
+    }
+
+    input:focus, select:focus {
+      outline: none;
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.25);
+      background: rgba(15, 23, 42, 0.85);
+    }
+
+    select option {
+      background: #1e293b;
+      color: #ffffff;
+    }
+
+    .submit-container {
+      margin-top: 30px;
+      text-align: center;
+    }
+
+    .submit-container button {
+      width: 100%;
+      max-width: 320px;
+      font-size: 16px;
+      padding: 14px;
+    }
+
+    /* Result cards */
+    #result, #riskFactors {
+      margin-top: 18px;
+      padding: 16px 20px;
+      border-radius: 12px;
+      font-size: 15px;
+      line-height: 1.6;
+      display: none;
+    }
+
+    #result {
+      background: rgba(15, 23, 42, 0.75);
+      border: 1px solid var(--card-border);
+      color: #f1f5f9;
+    }
+
+    #riskFactors {
+      background: rgba(15, 23, 42, 0.6);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      color: var(--text-muted);
+    }
+
+    .severity-badge {
+      display: inline-block;
+      padding: 4px 12px;
+      border-radius: 9999px;
+      font-weight: 700;
+      font-size: 14px;
+      margin-left: 8px;
+    }
+
+    .severity-1 { background: #065f46; color: #a7f3d0; border: 1px solid #10b981; }
+    .severity-2 { background: #1e40af; color: #bfdbfe; border: 1px solid #3b82f6; }
+    .severity-3 { background: #92400e; color: #fde68a; border: 1px solid #f59e0b; }
+    .severity-4 { background: #991b1b; color: #fecaca; border: 1px solid #ef4444; }
+
+    /* Pulsing animation for hotspots */
+    @keyframes hotspot-pulse {
+      0% { transform: scale(0.92); opacity: 0.85; }
+      50% { transform: scale(1.18); opacity: 1; }
+      100% { transform: scale(0.92); opacity: 0.85; }
+    }
+
+    .pulse-marker {
+      animation: hotspot-pulse 1.8s infinite ease-in-out;
+    }
+
+    /* Responsive */
+    @media (max-width: 640px) {
+      .container { padding: 20px 16px; }
+      .grid { grid-template-columns: 1fr; }
+      .tabs { flex-direction: column; }
+      #map { height: 300px; }
+      .eta-dashboard { grid-template-columns: 1fr 1fr; }
+      .hotspot-controls { gap: 6px; }
+      .hotspot-count { width: 100%; margin-top: 4px; }
+    }
+  </style>
+</head>
+
+<body>
+  <div class="container">
+    <header>
+      <span class="badge-header">AI Road Safety & Analysis</span>
+      <h1>Accident Severity Predictor</h1>
+      <p class="subtitle">Predict accident severity levels, calculate ETA, and analyze risk factors</p>
+    </header>
+
+    <!-- Guaranteed visible vehicle collision showcase banner -->
+    <div class="banner-container">
+      <img 
+        class="hero-banner" 
+        id="heroBannerImg"
+        src="https://images.unsplash.com/photo-1543393716-375f47996a77?w=1200&q=80" 
+        alt="Vehicle Collision Incident"
+        referrerpolicy="no-referrer"
+        onerror="this.onerror=null; this.src='https://upload.wikimedia.org/wikipedia/commons/thumb/d/d9/Verkehrsunfall1.jpg/1280px-Verkehrsunfall1.jpg'; this.onerror=function(){ this.style.display='none'; document.getElementById('svgBannerFallback').style.display='flex'; };"
+      />
+      <!-- Offline / blocked image SVG fallback -->
+      <div id="svgBannerFallback" style="display:none; width:100%; height:100%; background: linear-gradient(135deg, #1e293b, #0f172a); align-items:center; justify-content:center; flex-direction:column; gap:8px;">
+        <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="10"></circle>
+          <line x1="12" y1="8" x2="12" y2="12"></line>
+          <line x1="12" y1="16" x2="12.01" y2="16"></line>
+        </svg>
+        <span style="font-size:15px; font-weight:600; color:#f87171;">Vehicle Collision Incident Analysis System</span>
+      </div>
+      <div class="banner-overlay">
+        <div class="banner-title">🚗💥🚙 Multi-Vehicle Traffic Incident Analysis & Severity Engine</div>
+      </div>
+    </div>
+
+    <!-- Requirement 6: Exactly two tabs (No matter/paragraphs below tabs) -->
+    <div class="tabs">
+      <button type="button" class="tab-button active" data-tab="manualPanel">
+        📝 Enter details manually
+      </button>
+      <button type="button" class="tab-button" data-tab="locationPanel">
+        📍 Use my current location
+      </button>
+    </div>
+
+    <!-- Location detection trigger (shown when Tab 2 is active) -->
+    <div id="locationActionArea" style="display: none; margin: 16px 0 20px 0; text-align: center;">
+      <button id="locationButton" class="primary-btn" type="button" style="font-size: 15px; padding: 12px 26px;">
+        📍 Detect & Use My Current Location
+      </button>
+      <div id="status">Click above to detect GPS or IP location and fetch current weather.</div>
+    </div>
+
+    <form id="predictionForm">
+      <!-- Google Map, Hotspots & Route Selection Section -->
+      <div class="route-section">
+        <div class="route-header">
+          <h3>🗺️ Google Map, Hotspots & Destination Selection</h3>
+          <span style="font-size: 13px; color: var(--text-muted);">Way 1: Click map &bull; Way 2: Manual Lat/Lng</span>
+        </div>
+
+        <!-- Hotspot toggle and region filters -->
+        <div class="hotspot-controls">
+          <button type="button" id="toggleHotspotsBtn" class="hotspot-toggle-btn active">🟢 Hide Hotspots</button>
+          <button type="button" id="showAllBtn" class="region-btn active-region">All (32)</button>
+          <button type="button" id="showIndiaBtn" class="region-btn">🇮🇳 India (16)</button>
+          <button type="button" id="showUSBtn" class="region-btn">🇺🇸 US (16)</button>
+          <span id="hotspotCount" class="hotspot-count">32 hotspots active</span>
+        </div>
+
+        <!-- Map Container -->
+        <div id="map"></div>
+        <div class="map-hint">
+          <span>💡 <strong>Way 1:</strong> Click anywhere on the map to set Destination (End Lat & End Lon), or drag the red pin.</span>
+        </div>
+
+        <div class="maps-link-wrapper">
+          <a id="endMapsLink" href="https://www.google.com/maps" target="_blank" class="maps-link">
+            🔗 View Destination on Google Maps (Coordinates pending)
+          </a>
+        </div>
+
+        <!-- ETA telemetry dashboard -->
+        <div class="eta-dashboard">
+          <div class="eta-box">
+            <div class="eta-label">Estimated Distance</div>
+            <div id="etaDistance" class="eta-value">-- mi</div>
+          </div>
+          <div class="eta-box">
+            <div class="eta-label">Estimated Travel Time</div>
+            <div id="etaDuration" class="eta-value">-- min</div>
+          </div>
+          <div class="eta-box">
+            <div class="eta-label">Expected Reaching Time</div>
+            <div id="etaTime" class="eta-value highlight">--:-- --</div>
+          </div>
+          <div class="eta-box">
+            <div class="eta-label">Avg Travel Speed</div>
+            <div id="etaSpeed" class="eta-value">-- mph</div>
+          </div>
+        </div>
+      </div>
+
+      <h2 class="section-title">📍 Location and Weather</h2>
+      <div id="locationFields" class="grid"></div>
+
+      <h2 class="section-title">⏱️ Time Information</h2>
+      <div id="timeFields" class="grid"></div>
+
+      <h2 class="section-title">🛣️ Road Context & Features</h2>
+      <div id="roadFields" class="grid"></div>
+
+      <div class="submit-container">
+        <button class="primary-btn" type="submit">🚨 Predict Accident Severity</button>
+      </div>
+    </form>
+
+    <div id="result"></div>
+    <div id="riskFactors"></div>
+  </div>
+
+  <!-- Leaflet JS with fallback -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script>
+    if (typeof L === "undefined") {
+      document.write('<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"><\/script>');
+    }
+  </script>
+
+  <script>
+    /* =================================================================
+       1. FORM FIELDS GENERATION
+       ================================================================= */
+    const fieldGroups = {
+      location: [
+        ["Start_Lat", "Start Latitude", "number"],
+        ["Start_Lng", "Start Longitude", "number"],
+        ["End_Lat", "End Latitude", "number"],
+        ["End_Lng", "End Longitude", "number"],
+        ["State", "State abbreviation (example: CA, MH, DL)", "text"],
+        ["Temperature_F", "Temperature (F)", "number"],
+        ["Humidity_percent", "Humidity (%)", "number"],
+        ["Pressure_in", "Pressure (in)", "number"],
+        ["Visibility_mi", "Visibility (mi)", "number"],
+        ["Wind_Direction", "Wind direction (example: NW)", "text"],
+        ["Wind_Speed_mph", "Wind speed (mph)", "number"],
+        ["Weather_Condition_Clean", "Weather condition (example: Clear)", "text"]
+      ],
+      time: [
+        ["Hour", "Hour (0–23)", "number"],
+        ["Month", "Month (1–12)", "number"],
+        ["Day_Of_Week", "Day of week (Monday=0, Sunday=6)", "number"],
+        ["Is_Weekend", "Is weekend? (1=yes, 0=no)", "binary"],
+        ["Rush_Hour", "Rush hour? (1=yes, 0=no)", "binary"],
+        ["Is_Night", "Is night? (1=yes, 0=no)", "binary"]
+      ],
+      road: [
+        ["Distance_mi", "Distance (mi)", "number"],
+        ["Amenity", "Amenity nearby? (1=yes, 0=no)", "binary"],
+        ["Crossing", "Crossing nearby? (1=yes, 0=no)", "binary"],
+        ["Junction", "Junction nearby? (1=yes, 0=no)", "binary"],
+        ["Railway", "Railway nearby? (1=yes, 0=no)", "binary"],
+        ["Stop", "Stop nearby? (1=yes, 0=no)", "binary"],
+        ["Traffic_Signal", "Traffic signal nearby? (1=yes, 0=no)", "binary"]
+      ]
+    };
+
+    function makeField([name, labelText, type]) {
+      const label = document.createElement("label");
+      label.textContent = labelText;
+
+      let input;
+
+      if (type === "binary") {
+        input = document.createElement("select");
+        input.innerHTML = `
+          <option value="">Choose</option>
+          <option value="0">0 — No</option>
+          <option value="1">1 — Yes</option>
+        `;
+      } else {
+        input = document.createElement("input");
+        input.type = type;
+        if (type === "number") input.step = "any";
+        input.placeholder = "Enter " + labelText;
+      }
+
+      input.name = name;
+      input.id = "field_" + name;
+      input.required = true;
+      label.appendChild(input);
+      return label;
+    }
+
+    for (const field of fieldGroups.location) {
+      document.querySelector("#locationFields").appendChild(makeField(field));
+    }
+
+    for (const field of fieldGroups.time) {
+      document.querySelector("#timeFields").appendChild(makeField(field));
+    }
+
+    for (const field of fieldGroups.road) {
+      document.querySelector("#roadFields").appendChild(makeField(field));
+    }
+
+    const form = document.querySelector("#predictionForm");
+
+    /* =================================================================
+       2. TAB SWITCHING (Requirement 3: Clean tabs, no matter below)
+       ================================================================= */
+    function showTab(tabId) {
+      document.querySelectorAll(".tab-button").forEach(button => {
+        button.classList.toggle("active", button.dataset.tab === tabId);
+      });
+
+      const locationArea = document.getElementById("locationActionArea");
+      if (tabId === "locationPanel") {
+        locationArea.style.display = "block";
+      } else {
+        locationArea.style.display = "none";
+      }
+
+      if (typeof map !== "undefined" && map) {
+        setTimeout(() => { map.invalidateSize(); }, 150);
+      }
+    }
+
+    document.querySelectorAll(".tab-button").forEach(button => {
+      button.addEventListener("click", () => showTab(button.dataset.tab));
+    });
+
+    /* =================================================================
+       3. HELPER FUNCTIONS (Requirement 2: Time features NOT auto-filled on load)
+       ================================================================= */
+    function getTimeFeatures(timeZone) {
+      const formatter = new Intl.DateTimeFormat("en-US", {
+        timeZone,
+        weekday: "short",
+        hour: "2-digit",
+        hourCycle: "h23",
+        month: "numeric"
+      });
+
+      const parts = Object.fromEntries(
+        formatter.formatToParts(new Date())
+          .map(part => [part.type, part.value])
+      );
+
+      const weekdayNumbers = {
+        Mon: 0, Tue: 1, Wed: 2, Thu: 3, Fri: 4, Sat: 5, Sun: 6
+      };
+
+      const hour = Number(parts.hour);
+      const day = weekdayNumbers[parts.weekday];
+
+      return {
+        Hour: hour,
+        Month: Number(parts.month),
+        Day_Of_Week: day,
+        Is_Weekend: day >= 5 ? 1 : 0,
+        Rush_Hour: ((hour >= 7 && hour < 10) || (hour >= 16 && hour < 19)) ? 1 : 0,
+        Is_Night: (hour >= 20 || hour < 6) ? 1 : 0
+      };
+    }
+
+    function setField(name, value) {
+      const input = form.elements.namedItem(name);
+      if (input && value !== null && value !== undefined) {
+        input.value = typeof value === "number" && !Number.isInteger(value)
+          ? Number(value.toFixed(6))
+          : value;
+      }
+    }
+
+    function getField(name) {
+      const input = form.elements.namedItem(name);
+      return input ? input.value : "";
+    }
+
+    function fillTimeFields(timeZone) {
+      const values = getTimeFeatures(timeZone);
+      for (const [name, value] of Object.entries(values)) {
+        setField(name, value);
+      }
+    }
+
+    // NOTE: Intentionally NOT calling fillTimeFields on page load
+    // per user requirement: "time features are loading automatically" (keep fields blank initially)
+
+    function windDirection(degrees) {
+      const directions = [
+        "N", "NNE", "NE", "ENE", "E", "ESE", "SE", "SSE",
+        "S", "SSW", "SW", "WSW", "W", "WNW", "NW", "NNW"
+      ];
+      return directions[Math.round(degrees / 22.5) % 16];
+    }
+
+    function cleanWeatherCondition(code) {
+      if (code === 0) return "Clear";
+      if ([1, 2, 3].includes(code)) return "Cloudy";
+      if ([45, 48].includes(code)) return "Fog";
+      if ([51, 53, 55, 56, 57, 61, 63, 65, 66, 67, 80, 81, 82].includes(code)) {
+        return "Rain";
+      }
+      if ([71, 73, 75, 77, 85, 86].includes(code)) return "Snow";
+      if ([95, 96, 99].includes(code)) return "Thunderstorm";
+      return "Cloudy";
+    }
+
+    function getApiBaseUrl() {
+      const origin = window.location.origin;
+      if (origin && !origin.startsWith("file") && origin.startsWith("http")) {
+        return origin;
+      }
+      return "http://127.0.0.1:8000";
+    }
+
+    /* =================================================================
+       4. ETA LOGIC (Expected Reaching Time & Distance)
+       ================================================================= */
+    function haversineDistance(lat1, lon1, lat2, lon2) {
+      const R = 3958.8; // Earth radius in miles
+      const dLat = (lat2 - lat1) * Math.PI / 180;
+      const dLon = (lon2 - lon1) * Math.PI / 180;
+      const a =
+        Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+        Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+        Math.sin(dLon / 2) * Math.sin(dLon / 2);
+      const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+      const straightDistance = R * c;
+      const drivingDistance = straightDistance * 1.25;
+      return {
+        straightDistance,
+        drivingDistance: Math.max(0.01, drivingDistance)
+      };
+    }
+
+    function calculateETA() {
+      const startLat = parseFloat(getField("Start_Lat"));
+      const startLng = parseFloat(getField("Start_Lng"));
+      const endLat = parseFloat(getField("End_Lat"));
+      const endLng = parseFloat(getField("End_Lng"));
+
+      if (isNaN(startLat) || isNaN(startLng) || isNaN(endLat) || isNaN(endLng)) {
+        document.getElementById("etaDistance").textContent = "-- mi";
+        document.getElementById("etaDuration").textContent = "-- min";
+        document.getElementById("etaTime").textContent = "--:-- --";
+        document.getElementById("etaSpeed").textContent = "-- mph";
+        return;
+      }
+
+      const dist = haversineDistance(startLat, startLng, endLat, endLng);
+      const distanceMiles = dist.drivingDistance;
+
+      let avgSpeed = 45;
+      if (distanceMiles > 35) avgSpeed = 55;
+      if (distanceMiles > 100) avgSpeed = 65;
+
+      const rushHour = parseInt(getField("Rush_Hour"), 10);
+      if (rushHour === 1) avgSpeed *= 0.65;
+
+      const weather = getField("Weather_Condition_Clean");
+      if (["Rain", "Snow", "Thunderstorm"].includes(weather)) {
+        avgSpeed *= 0.8;
+      } else if (weather === "Fog") {
+        avgSpeed *= 0.75;
+      }
+
+      avgSpeed = Math.max(15, Math.round(avgSpeed));
+      const totalHours = distanceMiles / avgSpeed;
+      const totalMinutes = Math.round(totalHours * 60);
+
+      const hours = Math.floor(totalMinutes / 60);
+      const mins = totalMinutes % 60;
+      const durationFormatted = hours > 0 ? `${hours}h ${mins}m` : `${mins} min`;
+
+      const now = new Date();
+      const etaDate = new Date(now.getTime() + totalMinutes * 60000);
+      const etaTimeFormatted = etaDate.toLocaleTimeString([], {
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: true
+      });
+
+      document.getElementById("etaDistance").textContent = `${distanceMiles.toFixed(1)} mi`;
+      document.getElementById("etaDuration").textContent = durationFormatted;
+      document.getElementById("etaTime").textContent = etaTimeFormatted;
+      document.getElementById("etaSpeed").textContent = `${avgSpeed} mph`;
+
+      const distInput = form.elements.namedItem("Distance_mi");
+      if (distInput && (!distInput.value || distInput.dataset.autoFilled === "true")) {
+        distInput.value = distanceMiles.toFixed(2);
+        distInput.dataset.autoFilled = "true";
+      }
+
+      updateMapRoute();
+    }
+
+    /* =================================================================
+       5. HISTORICAL ACCIDENT HOTSPOTS (16 India + 16 US)
+       ================================================================= */
+    const historicalHotspots = [
+      // ---- INDIA (MoRTH Blackspots) ----
+      { id: "IND-001", country: "India", lat: 18.4575, lng: 73.8277, severity: 4, city: "Pune", state: "MH", street: "Navale Bridge, Mumbai-Bengaluru Bypass", desc: "High-severity blackspot. Steep highway descent leading to brake failures and multi-vehicle pileups.", weather: "Clear", source: "MoRTH India Accident Blackspot Record" },
+      { id: "IND-002", country: "India", lat: 18.7705, lng: 73.3762, severity: 4, city: "Khopoli / Lonavala", state: "MH", street: "Mumbai-Pune Expressway (Bhor Ghat Section)", desc: "Critical mountainous expressway section with sharp curves, steep gradient, and commercial truck collisions.", weather: "Mist / Overcast", source: "MoRTH India Accident Blackspot Record" },
+      { id: "IND-003", country: "India", lat: 28.7360, lng: 77.1610, severity: 4, city: "New Delhi", state: "DL", street: "Mukarba Chowk, Outer Ring Road & NH-44", desc: "High-fatality convergence zone where interstate freight trucks intersect dense commuter traffic.", weather: "Clear", source: "Delhi Traffic Police Blackspot Survey" },
+      { id: "IND-004", country: "India", lat: 28.3587, lng: 77.5360, severity: 4, city: "Greater Noida", state: "UP", street: "Yamuna Expressway (Mile 45-60 Stretch)", desc: "High-speed expressway corridor prone to major pileups during dense winter fog.", weather: "Fog", source: "Expressway Authority Safety Data" },
+      { id: "IND-005", country: "India", lat: 17.3616, lng: 78.3686, severity: 3, city: "Hyderabad", state: "TS", street: "Outer Ring Road (ORR) - Gachibowli to Shamshabad", desc: "High-speed 8-lane expressway merging sector with frequent night overspeeding collisions.", weather: "Clear", source: "Hyderabad Traffic Police Crash Statistics" },
+      { id: "IND-006", country: "India", lat: 12.9172, lng: 77.6228, severity: 3, city: "Bengaluru", state: "KA", street: "Silk Board Junction & Hosur Road (NH-44)", desc: "Extreme traffic bottleneck junction connecting Outer Ring Road and Hosur corridor.", weather: "Cloudy", source: "Bengaluru Traffic Police Blackspot Study" },
+      { id: "IND-007", country: "India", lat: 28.3588, lng: 76.9380, severity: 3, city: "Gurugram / Manesar", state: "HR", street: "NH-48 (Delhi-Jaipur Highway Kherki Daula)", desc: "Major highway corridor with heavy freight movement and intersection conflict points.", weather: "Haze", source: "MoRTH India Accident Blackspot Record" },
+      { id: "IND-008", country: "India", lat: 12.9249, lng: 80.1278, severity: 3, city: "Chennai", state: "TN", street: "Grand Southern Trunk Road, Tambaram", desc: "High-volume arterial corridor with heavy pedestrian crossing and commercial transit.", weather: "Partly Cloudy", source: "Tamil Nadu Road Safety Authority" },
+      { id: "IND-009", country: "India", lat: 22.5615, lng: 88.3075, severity: 3, city: "Howrah / Kolkata", state: "WB", street: "Kona Expressway & Vidyasagar Setu Approach", desc: "Elevated expressway bottleneck connecting Kolkata to NH-16, frequent truck brake incidents.", weather: "Clear", source: "West Bengal Highway Safety Cell" },
+      { id: "IND-010", country: "India", lat: 19.0634, lng: 72.8992, severity: 3, city: "Mumbai", state: "MH", street: "Eastern Express Highway (Chedda Nagar)", desc: "High-speed urban arterial junction with complex flyover merges and rapid lane changes.", weather: "Clear", source: "Mumbai Traffic Police Crash Log" },
+      { id: "IND-011", country: "India", lat: 12.8452, lng: 77.6602, severity: 3, city: "Bengaluru", state: "KA", street: "Electronic City Elevated Tollway (Hosur Rd)", desc: "Elevated 10 km corridor with overspeeding and monsoon skid hazards.", weather: "Rain", source: "Karnataka State Police Safety Data" },
+      { id: "IND-012", country: "India", lat: 23.0305, lng: 72.5080, severity: 2, city: "Ahmedabad", state: "GJ", street: "SG Highway (Sarkhej-Gandhinagar Highway)", desc: "Major transit corridor with frequent cross-traffic signal collisions.", weather: "Clear", source: "Ahmedabad Traffic Safety Assessment" },
+      { id: "IND-013", country: "India", lat: 10.0261, lng: 76.3082, severity: 2, city: "Kochi", state: "KL", street: "Edappally Junction (NH-66 & NH-544)", desc: "Dense intersection joining national highways and metro corridor with turning friction.", weather: "Light Rain", source: "Kerala Road Safety Authority" },
+      { id: "IND-014", country: "India", lat: 17.4265, lng: 78.4518, severity: 2, city: "Hyderabad", state: "TS", street: "Panjagutta Central Junction & Flyover", desc: "Heavy urban core junction with continuous merging and signal transition friction.", weather: "Clear", source: "Hyderabad Traffic Police Crash Statistics" },
+      { id: "IND-015", country: "India", lat: 30.7046, lng: 76.7978, severity: 1, city: "Chandigarh", state: "CH", street: "Tribune Chowk (Purv Marg & Dakshin Marg)", desc: "Large signalized roundabout with regulated speed flow and minor fender-benders.", weather: "Clear", source: "Chandigarh Traffic Police Data" },
+      { id: "IND-016", country: "India", lat: 18.9438, lng: 72.8232, severity: 1, city: "Mumbai", state: "MH", street: "Marine Drive Promenade (NC Bose Rd)", desc: "Regulated speed coastal arterial with strict signals and minor low-speed contact.", weather: "Clear", source: "Mumbai Traffic Police Crash Log" },
+      // ---- US (SDC US-Accidents Dataset) ----
+      { id: "US-001", country: "US", lat: 39.91741, lng: -83.01424, severity: 4, city: "Columbus", state: "OH", street: "Frank Rd", desc: "Entry ramp closed due to major collision on OH-104 at I-71.", weather: "Clear", source: "US-Accidents Dataset Record" },
+      { id: "US-002", country: "US", lat: 37.32112, lng: -121.89989, severity: 4, city: "San Jose", state: "CA", street: "I-280 S", desc: "Major freeway collision on I-280 Southbound at Bird Ave.", weather: "Clear", source: "US-Accidents Dataset Record" },
+      { id: "US-003", country: "US", lat: 37.63062, lng: -122.43504, severity: 4, city: "San Bruno", state: "CA", street: "Junipero Serra Fwy N", desc: "Multi-lane collision on I-280 before I-380 interchange.", weather: "Partly Cloudy", source: "US-Accidents Dataset Record" },
+      { id: "US-004", country: "US", lat: 37.33911, lng: -121.85181, severity: 4, city: "San Jose", state: "CA", street: "Bayshore Fwy S", desc: "Right lane blocked on I-680 Southbound before US-101.", weather: "Haze", source: "US-Accidents Dataset Record" },
+      { id: "US-005", country: "US", lat: 39.86515, lng: -84.05872, severity: 3, city: "Dayton", state: "OH", street: "I-70 E", desc: "Lane blocked on I-70 Eastbound at State Route 4.", weather: "Light Rain", source: "US-Accidents Dataset Record" },
+      { id: "US-006", country: "US", lat: 39.74775, lng: -84.20558, severity: 3, city: "Dayton", state: "OH", street: "I-75 S", desc: "Highway incident on I-75 Southbound at US-35.", weather: "Mostly Cloudy", source: "US-Accidents Dataset Record" },
+      { id: "US-007", country: "US", lat: 40.10059, lng: -82.92519, severity: 3, city: "Westerville", state: "OH", street: "Westerville Rd", desc: "Accident on I-270 Outerbelt Northbound near State St.", weather: "Light Rain", source: "US-Accidents Dataset Record" },
+      { id: "US-008", country: "US", lat: 39.77038, lng: -84.1949, severity: 3, city: "Dayton", state: "OH", street: "N Main St", desc: "Accident on I-75 Southbound at Grand Ave.", weather: "Overcast", source: "US-Accidents Dataset Record" },
+      { id: "US-009", country: "US", lat: 39.92806, lng: -82.83118, severity: 2, city: "Reynoldsburg", state: "OH", street: "Brice Rd", desc: "Accident on Brice Rd at Tussing Rd.", weather: "Light Rain", source: "US-Accidents Dataset Record" },
+      { id: "US-010", country: "US", lat: 39.06315, lng: -84.03261, severity: 2, city: "Williamsburg", state: "OH", street: "State Route 32", desc: "Accident on OH-32 Westbound at Dela Palma Rd.", weather: "Overcast", source: "US-Accidents Dataset Record" },
+      { id: "US-011", country: "US", lat: 39.62778, lng: -84.18835, severity: 2, city: "Dayton", state: "OH", street: "Miamisburg Centerville Rd", desc: "Collision at McEwen Rd & OH-725.", weather: "Mostly Cloudy", source: "US-Accidents Dataset Record" },
+      { id: "US-012", country: "US", lat: 39.75827, lng: -84.23051, severity: 2, city: "Dayton", state: "OH", street: "N Woodward Ave", desc: "Urban incident at Oakridge Dr & Woodward Ave.", weather: "Overcast", source: "US-Accidents Dataset Record" },
+      { id: "US-013", country: "US", lat: 41.39581, lng: -81.93556, severity: 1, city: "North Olmsted", state: "OH", street: "Maplehurst Rd", desc: "Minor property damage at Westlawn Dr & Holly Dr.", weather: "Overcast", source: "US-Accidents Dataset Record" },
+      { id: "US-014", country: "US", lat: 40.01867, lng: -81.5657, severity: 1, city: "Cambridge", state: "OH", street: "Old Byesville Rd", desc: "Low-impact collision on North Ave at Old Byesville Rd.", weather: "Light Rain", source: "US-Accidents Dataset Record" },
+      { id: "US-015", country: "US", lat: 37.75049, lng: -121.37998, severity: 1, city: "Tracy", state: "CA", street: "W F St", desc: "Minor vehicle scrape at Banta Rd & Brichetto Rd.", weather: "Clear", source: "US-Accidents Dataset Record" },
+      { id: "US-016", country: "US", lat: 36.83132, lng: -121.43517, severity: 1, city: "Hollister", state: "CA", street: "Union Rd", desc: "Minor collision on Union Rd near Access Rd.", weather: "Clear", source: "US-Accidents Dataset Record" }
+    ];
+
+    /* =================================================================
+       6. GOOGLE MAP INITIALIZATION & HOTSPOTS (Requirements 1 & 4)
+       ================================================================= */
+    let map, startMarker, endMarker, routePolyline;
+    let hotspotLayerGroup = null;
+    let hotspotsVisible = true; // SHOWN BY DEFAULT
+    let currentRegion = "all";
+
+    const severityColors = {
+      1: "#10b981", // Low - Green
+      2: "#3b82f6", // Moderate - Blue
+      3: "#f59e0b", // High - Amber
+      4: "#ef4444"  // Critical - Red
+    };
+
+    const severityLabelsShort = {
+      1: "Low Impact",
+      2: "Moderate",
+      3: "High Severity",
+      4: "Critical"
+    };
+
+    function createHotspotMarker(spot) {
+      const color = severityColors[spot.severity] || "#94a3b8";
+      const size = 16 + (spot.severity * 4);
+      const icon = L.divIcon({
+        className: "hotspot-marker-icon",
+        html: `<div class="pulse-marker" style="
+          background: ${color};
+          width: ${size}px; height: ${size}px;
+          border-radius: 50%;
+          border: 2px solid #ffffff;
+          box-shadow: 0 0 10px ${color};
+          cursor: pointer;
+        "></div>`,
+        iconSize: [size, size],
+        iconAnchor: [size / 2, size / 2]
+      });
+
+      const marker = L.marker([spot.lat, spot.lng], { icon });
+      marker.bindPopup(`
+        <div style="font-family: 'Segoe UI', sans-serif; max-width: 280px; color: #1e293b;">
+          <div style="font-weight: 700; font-size: 14px; margin-bottom: 4px;">
+            ${spot.country === "India" ? "🇮🇳" : "🇺🇸"} ${spot.city}, ${spot.state}
+          </div>
+          <div style="font-size: 12px; color: #64748b; margin-bottom: 6px;">${spot.street}</div>
+          <div style="display: inline-block; padding: 2px 8px; border-radius: 9999px; font-size: 11px; font-weight: 700; background: ${color}22; color: ${color}; border: 1px solid ${color}55; margin-bottom: 6px;">
+            Severity ${spot.severity} — ${severityLabelsShort[spot.severity]}
+          </div>
+          <div style="font-size: 12px; margin-bottom: 6px; line-height: 1.4;">${spot.desc}</div>
+          <div style="font-size: 11px; color: #94a3b8;">🌤️ ${spot.weather} &bull; 📋 ${spot.source}</div>
+        </div>
+      `);
+      return marker;
+    }
+
+    function getFilteredHotspots() {
+      if (currentRegion === "india") {
+        return historicalHotspots.filter(h => h.country === "India");
+      } else if (currentRegion === "us") {
+        return historicalHotspots.filter(h => h.country === "US");
+      }
+      return historicalHotspots;
+    }
+
+    function renderHotspots() {
+      if (!map) return;
+
+      if (hotspotLayerGroup && map.hasLayer(hotspotLayerGroup)) {
+        map.removeLayer(hotspotLayerGroup);
+      }
+
+      const filtered = getFilteredHotspots();
+      const markers = filtered.map(createHotspotMarker);
+      hotspotLayerGroup = L.layerGroup(markers);
+
+      if (hotspotsVisible) {
+        hotspotLayerGroup.addTo(map);
+      }
+
+      const countEl = document.getElementById("hotspotCount");
+      if (countEl) {
+        countEl.textContent = hotspotsVisible ? `${filtered.length} hotspots active` : "Hotspots hidden";
+      }
+    }
+
+    function toggleHotspots() {
+      if (!map) return;
+      const btn = document.getElementById("toggleHotspotsBtn");
+
+      if (hotspotsVisible) {
+        if (hotspotLayerGroup && map.hasLayer(hotspotLayerGroup)) {
+          map.removeLayer(hotspotLayerGroup);
+        }
+        hotspotsVisible = false;
+        btn.textContent = "🔴 Show Hotspots";
+        btn.classList.remove("active");
+        const countEl = document.getElementById("hotspotCount");
+        if (countEl) countEl.textContent = "Hotspots hidden";
+      } else {
+        hotspotsVisible = true;
+        renderHotspots();
+        btn.textContent = "🟢 Hide Hotspots";
+        btn.classList.add("active");
+        zoomToRegion();
+      }
+    }
+
+    function zoomToRegion() {
+      if (!map || !hotspotsVisible) return;
+      const filtered = getFilteredHotspots();
+      if (filtered.length === 0) return;
+
+      if (currentRegion === "india") {
+        map.fitBounds([[8.0, 68.0], [35.0, 97.0]], { padding: [30, 30] });
+      } else if (currentRegion === "us") {
+        map.fitBounds([[25.0, -125.0], [50.0, -66.0]], { padding: [30, 30] });
+      } else {
+        const lats = filtered.map(h => h.lat);
+        const lngs = filtered.map(h => h.lng);
+        map.fitBounds([
+          [Math.min(...lats) - 2, Math.min(...lngs) - 2],
+          [Math.max(...lats) + 2, Math.max(...lngs) + 2]
+        ], { padding: [30, 30] });
+      }
+    }
+
+    function setActiveRegionBtn(region) {
+      currentRegion = region;
+      document.querySelectorAll(".region-btn").forEach(btn => {
+        btn.classList.remove("active-region");
+      });
+      const idMap = { all: "showAllBtn", india: "showIndiaBtn", us: "showUSBtn" };
+      const activeBtn = document.getElementById(idMap[region]);
+      if (activeBtn) activeBtn.classList.add("active-region");
+
+      if (hotspotsVisible) {
+        renderHotspots();
+        zoomToRegion();
+      }
+    }
+
+    function initMap() {
+      if (typeof L === "undefined") {
+        console.warn("Leaflet library not loaded yet.");
+        setTimeout(initMap, 200);
+        return;
+      }
+
+      // Initialize map over India
+      map = L.map("map", {
+        center: [20.5937, 78.9629],
+        zoom: 5,
+        zoomControl: true
+      });
+
+      // Rock-solid OpenStreetMap base layer (guaranteed to load everywhere)
+      const osmLayer = L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
+        maxZoom: 19,
+        attribution: '&copy; OpenStreetMap contributors'
+      });
+
+      // Google Maps Roads Layer
+      const googleRoads = L.tileLayer("https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}", {
+        maxZoom: 20,
+        attribution: '&copy; Google Maps'
+      });
+
+      // Google Maps Hybrid (Satellite with street names)
+      const googleHybrid = L.tileLayer("https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}", {
+        maxZoom: 20,
+        attribution: '&copy; Google Maps'
+      });
+
+      // CartoDB Voyager (clean Google-style aesthetic)
+      const cartoVoyager = L.tileLayer("https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png", {
+        maxZoom: 19,
+        subdomains: "abcd",
+        attribution: '&copy; CartoDB &copy; OpenStreetMap'
+      });
+
+      // Add Google Roads by default; fallback to OSM if tiles fail
+      googleRoads.addTo(map);
+      googleRoads.on("tileerror", function() {
+        if (!map.hasLayer(osmLayer) && !map.hasLayer(cartoVoyager)) {
+          osmLayer.addTo(map);
+        }
+      });
+
+      // Layer switcher control for Google Maps, Satellite, and Street views
+      L.control.layers({
+        "Google Maps (Roads)": googleRoads,
+        "Google Maps (Satellite)": googleHybrid,
+        "Clean Street Map": cartoVoyager,
+        "OpenStreetMap": osmLayer
+      }, null, { position: "topright" }).addTo(map);
+
+      // Render all 32 hotspots immediately onto the map
+      hotspotsVisible = true;
+      renderHotspots();
+
+      // Way 1: Click anywhere on map to select Destination (End Lat & End Lon)
+      map.on("click", function(e) {
+        const lat = Number(e.latlng.lat.toFixed(6));
+        const lng = Number(e.latlng.lng.toFixed(6));
+
+        setField("End_Lat", lat);
+        setField("End_Lng", lng);
+
+        updateEndMarker(lat, lng);
+        updateMapsLink(lat, lng);
+        calculateETA();
+      });
+
+      // Way 2: Synchronize map markers when coordinates are typed manually
+      ["Start_Lat", "Start_Lng"].forEach(name => {
+        const input = document.getElementById("field_" + name);
+        if (input) {
+          input.addEventListener("input", () => {
+            syncStartFromInputs();
+            calculateETA();
+          });
+        }
+      });
+
+      ["End_Lat", "End_Lng"].forEach(name => {
+        const input = document.getElementById("field_" + name);
+        if (input) {
+          input.addEventListener("input", () => {
+            syncEndFromInputs();
+            calculateETA();
+          });
+        }
+      });
+
+      ["Rush_Hour", "Weather_Condition_Clean"].forEach(name => {
+        const input = document.getElementById("field_" + name);
+        if (input) {
+          input.addEventListener("change", calculateETA);
+        }
+      });
+
+      // Hotspot button controls
+      document.getElementById("toggleHotspotsBtn").addEventListener("click", toggleHotspots);
+      document.getElementById("showAllBtn").addEventListener("click", () => setActiveRegionBtn("all"));
+      document.getElementById("showIndiaBtn").addEventListener("click", () => setActiveRegionBtn("india"));
+      document.getElementById("showUSBtn").addEventListener("click", () => setActiveRegionBtn("us"));
+
+      // Ensure proper sizing after DOM render
+      setTimeout(() => { map.invalidateSize(); }, 300);
+
+      // Try fetching any extra dynamic hotspots from backend
+      fetchHotspotsFromBackend();
+    }
+
+    async function fetchHotspotsFromBackend() {
+      try {
+        const baseUrl = getApiBaseUrl();
+        const resp = await fetch(baseUrl + "/api/hotspots");
+        if (!resp.ok) return;
+        const data = await resp.json();
+        if (data.hotspots && Array.isArray(data.hotspots)) {
+          const existingIds = new Set(historicalHotspots.map(h => h.id));
+          for (const h of data.hotspots) {
+            if (!existingIds.has(h.id)) {
+              historicalHotspots.push(h);
+              existingIds.add(h.id);
+            }
+          }
+          if (hotspotsVisible) {
+            renderHotspots();
+          }
+        }
+      } catch (e) {
+        // Hardcoded hotspots ensure map always works even without backend
+      }
+    }
+
+    /* Start / End Markers & Polyline Route */
+    function updateStartMarker(lat, lng) {
+      if (!map || typeof L === "undefined") return;
+      const startIcon = L.divIcon({
+        className: "custom-div-icon",
+        html: `<div style="background-color: #10b981; width: 28px; height: 28px; border-radius: 50%; border: 3px solid white; box-shadow: 0 3px 8px rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; color: white; font-size: 13px; font-weight: bold;">S</div>`,
+        iconSize: [28, 28],
+        iconAnchor: [14, 14]
+      });
+
+      if (!startMarker) {
+        startMarker = L.marker([lat, lng], { icon: startIcon, draggable: true }).addTo(map);
+        startMarker.bindPopup("<strong>Start Location</strong><br>Lat: " + lat + "<br>Lng: " + lng);
+        startMarker.on("dragend", function(ev) {
+          const pos = ev.target.getLatLng();
+          setField("Start_Lat", pos.lat);
+          setField("Start_Lng", pos.lng);
+          calculateETA();
+        });
+      } else {
+        startMarker.setLatLng([lat, lng]);
+        startMarker.getPopup().setContent("<strong>Start Location</strong><br>Lat: " + lat + "<br>Lng: " + lng);
+      }
+    }
+
+    function updateEndMarker(lat, lng) {
+      if (!map || typeof L === "undefined") return;
+      const endIcon = L.divIcon({
+        className: "custom-div-icon",
+        html: `<div style="background-color: #ef4444; width: 28px; height: 28px; border-radius: 50%; border: 3px solid white; box-shadow: 0 3px 8px rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; color: white; font-size: 13px; font-weight: bold;">E</div>`,
+        iconSize: [28, 28],
+        iconAnchor: [14, 14]
+      });
+
+      if (!endMarker) {
+        endMarker = L.marker([lat, lng], { icon: endIcon, draggable: true }).addTo(map);
+        endMarker.bindPopup("<strong>Destination (End)</strong><br>Lat: " + lat + "<br>Lng: " + lng).openPopup();
+        endMarker.on("dragend", function(ev) {
+          const pos = ev.target.getLatLng();
+          setField("End_Lat", pos.lat);
+          setField("End_Lng", pos.lng);
+          updateMapsLink(pos.lat, pos.lng);
+          calculateETA();
+        });
+      } else {
+        endMarker.setLatLng([lat, lng]);
+        endMarker.getPopup().setContent("<strong>Destination (End)</strong><br>Lat: " + lat + "<br>Lng: " + lng).openPopup();
+      }
+    }
+
+    function updateMapRoute() {
+      if (!map || typeof L === "undefined") return;
+      const startLat = parseFloat(getField("Start_Lat"));
+      const startLng = parseFloat(getField("Start_Lng"));
+      const endLat = parseFloat(getField("End_Lat"));
+      const endLng = parseFloat(getField("End_Lng"));
+
+      if (!isNaN(startLat) && !isNaN(startLng) && !isNaN(endLat) && !isNaN(endLng)) {
+        const latlngs = [
+          [startLat, startLng],
+          [endLat, endLng]
+        ];
+
+        if (!routePolyline) {
+          routePolyline = L.polyline(latlngs, {
+            color: "#38bdf8",
+            weight: 4,
+            opacity: 0.85,
+            dashArray: "8, 6"
+          }).addTo(map);
+        } else {
+          routePolyline.setLatLngs(latlngs);
+        }
+
+        const bounds = L.latLngBounds(latlngs);
+        map.fitBounds(bounds, { padding: [50, 50], maxZoom: 14 });
+      }
+    }
+
+    function syncStartFromInputs() {
+      const lat = parseFloat(getField("Start_Lat"));
+      const lng = parseFloat(getField("Start_Lng"));
+      if (!isNaN(lat) && !isNaN(lng)) {
+        updateStartMarker(lat, lng);
+        if (!endMarker) {
+          map.setView([lat, lng], 11);
+        }
+      }
+    }
+
+    function syncEndFromInputs() {
+      const lat = parseFloat(getField("End_Lat"));
+      const lng = parseFloat(getField("End_Lng"));
+      if (!isNaN(lat) && !isNaN(lng)) {
+        updateEndMarker(lat, lng);
+        updateMapsLink(lat, lng);
+      }
+    }
+
+    function updateMapsLink(lat, lng) {
+      const link = document.getElementById("endMapsLink");
+      if (link && lat !== null && lng !== null && !isNaN(lat) && !isNaN(lng)) {
+        const url = `https://www.google.com/maps?q=${Number(lat).toFixed(6)},${Number(lng).toFixed(6)}`;
+        link.href = url;
+        link.textContent = `🔗 View Destination on Google Maps (${Number(lat).toFixed(4)}, ${Number(lng).toFixed(4)})`;
+      }
+    }
+
+    // Initialize map on window load
+    window.addEventListener("DOMContentLoaded", initMap);
+
+    /* =================================================================
+       7. RESILIENT CURRENT LOCATION DETECTION (GPS + IP Fallback)
+       ================================================================= */
+    async function determineLocation() {
+      if (navigator.geolocation) {
+        try {
+          const pos = await new Promise((resolve, reject) => {
+            navigator.geolocation.getCurrentPosition(resolve, reject, {
+              enableHighAccuracy: true,
+              timeout: 7000,
+              maximumAge: 60000
+            });
+          });
+          return {
+            latitude: pos.coords.latitude,
+            longitude: pos.coords.longitude,
+            method: "GPS"
+          };
+        } catch (gpsError) {
+          console.warn("Browser GPS unavailable or timed out, trying IP fallback...", gpsError.message);
+        }
+      }
+
+      // IP geolocation fallback 1 (ipwho.is)
+      try {
+        const res = await fetch("https://ipwho.is/");
+        if (res.ok) {
+          const data = await res.json();
+          if (data.success && data.latitude && data.longitude) {
+            return {
+              latitude: data.latitude,
+              longitude: data.longitude,
+              state: data.region_code || data.region,
+              city: data.city,
+              method: "IP (Approximate)"
+            };
+          }
+        }
+      } catch (ipErr1) {
+        console.warn("ipwho.is unavailable, trying ipapi...", ipErr1.message);
+      }
+
+      // IP geolocation fallback 2 (ipapi.co)
+      try {
+        const res2 = await fetch("https://ipapi.co/json/");
+        if (res2.ok) {
+          const data2 = await res2.json();
+          if (data2.latitude && data2.longitude) {
+            return {
+              latitude: data2.latitude,
+              longitude: data2.longitude,
+              state: data2.region_code || data2.region,
+              city: data2.city,
+              method: "IP (Approximate)"
+            };
+          }
+        }
+      } catch (ipErr2) {
+        console.warn("ipapi.co unavailable:", ipErr2.message);
+      }
+
+      throw new Error("Location permission denied or unavailable. Please enter coordinates manually.");
+    }
+
+    document.querySelector("#locationButton").addEventListener("click", async () => {
+      const btn = document.querySelector("#locationButton");
+      const status = document.querySelector("#status");
+
+      btn.disabled = true;
+      btn.textContent = "⏳ Detecting location...";
+      status.style.color = "#93c5fd";
+      status.textContent = "Requesting location coordinates...";
+
+      try {
+        const loc = await determineLocation();
+        const latitude = loc.latitude;
+        const longitude = loc.longitude;
+        let state = loc.state || "";
+
+        status.textContent = `📍 Found coordinates (${loc.method})! Fetching state & weather...`;
+
+        // Reverse-geocode to state if not already provided
+        if (!state) {
+          try {
+            const geoUrl = new URL("https://api.bigdatacloud.net/data/reverse-geocode-client");
+            geoUrl.search = new URLSearchParams({
+              latitude,
+              longitude,
+              localityLanguage: "en"
+            });
+            const geoResponse = await fetch(geoUrl);
+            if (geoResponse.ok) {
+              const place = await geoResponse.json();
+              const subdivisionCode = place.principalSubdivisionCode || "";
+              state = subdivisionCode.includes("-")
+                ? subdivisionCode.split("-").pop()
+                : place.principalSubdivision || "";
+            }
+          } catch (geoErr) {
+            console.warn("Reverse geocode failed:", geoErr.message);
+          }
+        }
+
+        // Fetch live weather from Open-Meteo
+        try {
+          const weatherUrl = new URL("https://api.open-meteo.com/v1/forecast");
+          weatherUrl.search = new URLSearchParams({
+            latitude,
+            longitude,
+            current: [
+              "temperature_2m",
+              "relative_humidity_2m",
+              "surface_pressure",
+              "visibility",
+              "wind_speed_10m",
+              "wind_direction_10m",
+              "weather_code"
+            ].join(","),
+            temperature_unit: "fahrenheit",
+            wind_speed_unit: "mph",
+            timezone: "auto"
+          });
+
+          const weatherResponse = await fetch(weatherUrl);
+          if (weatherResponse.ok) {
+            const weather = await weatherResponse.json();
+            const current = weather.current;
+
+            setField("Temperature_F", current.temperature_2m);
+            setField("Humidity_percent", current.relative_humidity_2m);
+            setField("Pressure_in", (current.surface_pressure / 33.8639).toFixed(2));
+            setField("Visibility_mi", (current.visibility / 1609.344).toFixed(1));
+            setField("Wind_Direction", windDirection(current.wind_direction_10m));
+            setField("Wind_Speed_mph", current.wind_speed_10m);
+            setField("Weather_Condition_Clean", cleanWeatherCondition(current.weather_code));
+
+            fillTimeFields(weather.timezone || "UTC");
+          }
+        } catch (weatherErr) {
+          console.warn("Weather fetch failed:", weatherErr.message);
+        }
+
+        setField("Start_Lat", latitude);
+        setField("Start_Lng", longitude);
+        setField("State", state);
+
+        updateStartMarker(latitude, longitude);
+        map.setView([latitude, longitude], 12);
+        calculateETA();
+
+        status.style.color = "#34d399";
+        status.textContent =
+          `✅ Loaded location via ${loc.method}: ${latitude.toFixed(4)}, ${longitude.toFixed(4)}. ` +
+          `State: ${state || "(enter manually)"}. Select destination on the Google Map or enter below.`;
+      } catch (error) {
+        status.style.color = "#fca5a5";
+        status.textContent = "❌ " + error.message;
+      } finally {
+        btn.disabled = false;
+        btn.textContent = "📍 Detect & Use My Current Location";
+      }
+    });
+
+    /* =================================================================
+       8. PREDICTION SUBMISSION
+       ================================================================= */
+    form.addEventListener("submit", async event => {
+      event.preventDefault();
+
+      const formData = new FormData(form);
+      const payload = {};
+
+      for (const [key, value] of formData.entries()) {
+        const numericFields = [
+          "Start_Lat", "Start_Lng", "End_Lat", "End_Lng", "Temperature_F", "Humidity_percent",
+          "Pressure_in", "Visibility_mi", "Wind_Speed_mph", "Hour", "Month",
+          "Day_Of_Week", "Is_Weekend", "Rush_Hour", "Is_Night", "Distance_mi",
+          "Amenity", "Crossing", "Junction", "Railway", "Stop", "Traffic_Signal"
+        ];
+
+        payload[key] = numericFields.includes(key) ? Number(value) : value;
+      }
+
+      const resultBox = document.querySelector("#result");
+      const riskBox = document.querySelector("#riskFactors");
+      resultBox.style.display = "block";
+      resultBox.innerHTML = "<span>⏳ Predicting accident severity...</span>";
+      riskBox.style.display = "none";
+      riskBox.textContent = "";
+
+      try {
+        const apiUrl = getApiBaseUrl() + "/predict";
+        const response = await fetch(apiUrl, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload)
+        });
+
+        const result = await response.json();
+        if (!response.ok) {
+          throw new Error(result.detail || result.detail?.[0]?.msg || "Prediction request failed.");
+        }
+
+        const sev = Number(result.predicted_severity);
+        const badgeClass = `severity-${sev}`;
+        const severityLabels = {
+          1: "Severity 1 (Low Impact)",
+          2: "Severity 2 (Moderate Impact)",
+          3: "Severity 3 (High Severity)",
+          4: "Severity 4 (Critical Accident)"
+        };
+
+        resultBox.innerHTML = `
+          <strong>Predicted Accident Severity:</strong>
+          <span class="severity-badge ${badgeClass}">${severityLabels[sev] || "Severity " + sev}</span>
+          <div style="font-size: 12px; color: var(--text-muted); margin-top: 6px;">Engine: ${result.engine || "ML Model"}</div>
+        `;
+
+        riskBox.style.display = "block";
+        if (result.risk_factors && result.risk_factors.length > 0) {
+          riskBox.innerHTML = "<strong>Primary Risk Factors:</strong> " + result.risk_factors.map(r => `<span style="display:inline-block; background:rgba(255,255,255,0.1); padding:2px 8px; border-radius:4px; margin:2px 4px;">${r}</span>`).join(" ");
+        } else {
+          riskBox.textContent = "Risk factors will appear here after analysis.";
+        }
+      } catch (error) {
+        resultBox.innerHTML =
+          `<span style="color: #f87171;">❌ Could not connect to prediction API. Make sure FastAPI server is running.<br>Error: ${error.message}</span>`;
+      }
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,33 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# Virtual Environments
+road_env/
+.venv/
+backend/.venv/
+env/
+venv/
+ENV/
+
+# Large Datasets (GitHub 100MB limit)
+data/
+*.xls
+*.xlsx
+*.csv
+
+# Jupyter Notebook checkpoints
+.ipynb_checkpoints/
+
+# IDE & Editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS files
+.DS_Store
+Thumbs.db
