@@ -663,6 +663,73 @@ US_HOTSPOTS = [
 HISTORICAL_HOTSPOTS = INDIA_HOTSPOTS + US_HOTSPOTS
 
 
+class OfficerAlert(BaseModel):
+    id: Optional[str] = None
+    location: str = Field(..., description="Location name or landmark")
+    message: str = Field(..., description="Alert message details")
+    severity: str = Field(default="Critical", description="Severity level")
+    sender: Optional[str] = Field(default="Citizen", description="Sender role or name")
+    timestamp: Optional[str] = Field(default=None, description="Formatted time")
+    status: str = Field(default="Active", description="Alert resolution status")
+
+
+OFFICER_ALERTS = [
+    {
+        "id": "ALT-101",
+        "location": "Navale Bridge, Mumbai-Bengaluru Highway, Pune",
+        "message": "Multi-vehicle collision on steep slope blocking two lanes. Ambulance and tow truck requested.",
+        "severity": "Critical",
+        "sender": "Highway Patrol / Citizen",
+        "timestamp": "Today, 10:15 AM",
+        "status": "Active"
+    },
+    {
+        "id": "ALT-102",
+        "location": "Mukarba Chowk, Outer Ring Road, Delhi",
+        "message": "Freight truck barrier contact near NH-44 merge. Slow congestion building, traffic diversion needed.",
+        "severity": "High",
+        "sender": "Commuter Alert",
+        "timestamp": "Today, 09:40 AM",
+        "status": "Dispatched"
+    },
+    {
+        "id": "ALT-103",
+        "location": "Silk Board Junction, Hosur Road, Bengaluru",
+        "message": "Two-car rear end fender bender before flyover entrance. Vehicles moved to shoulder.",
+        "severity": "Moderate",
+        "sender": "Traffic Monitor",
+        "timestamp": "Today, 08:55 AM",
+        "status": "Resolved"
+    }
+]
+
+
+@app.get("/api/alerts")
+def get_officer_alerts():
+    """Retrieve police officer emergency alerts sent by users/commuters."""
+    return {
+        "status": "success",
+        "count": len(OFFICER_ALERTS),
+        "alerts": OFFICER_ALERTS
+    }
+
+
+@app.post("/api/alerts")
+def submit_officer_alert(alert: OfficerAlert):
+    """Submit a manual incident alert from citizens or patrol for police officers to view."""
+    import datetime
+    new_item = alert.model_dump()
+    new_item["id"] = f"ALT-{len(OFFICER_ALERTS) + 101}"
+    if not new_item.get("timestamp"):
+        new_item["timestamp"] = datetime.datetime.now().strftime("%d %b, %I:%M %p")
+    OFFICER_ALERTS.insert(0, new_item)
+    return {
+        "status": "success",
+        "message": "Alert dispatched to officers feed",
+        "alert": new_item
+    }
+
+
 @app.get("/api/hotspots")
 def get_historical_hotspots(region: Optional[str] = None):
     """Return verified historical accident records from India (MoRTH) & US (SDC) datasets."""

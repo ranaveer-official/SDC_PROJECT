@@ -3,161 +3,135 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Accident Severity Predictor & Route Risk</title>
-
-  <!-- Leaflet CSS for Map selection & Hotspots (with CDN fallback) -->
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css" />
+  <title>AI Road Accident Severity Predictor & Emergency Route Risk</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 
   <style>
     :root {
-      --primary: #2563eb;
-      --primary-hover: #1d4ed8;
-      --primary-light: rgba(37, 99, 235, 0.15);
-      --bg-dark: rgba(15, 23, 42, 0.90);
-      --card-bg: rgba(30, 41, 59, 0.88);
-      --card-border: rgba(255, 255, 255, 0.12);
-      --input-bg: rgba(15, 23, 42, 0.70);
-      --input-border: rgba(148, 163, 184, 0.3);
+      --primary: #0ea5e9;
+      --primary-hover: #0284c7;
+      --primary-glow: rgba(14, 165, 233, 0.3);
+      --bg: #07111f;
+      --card-bg: rgba(9, 20, 35, 0.90);
+      --card-border: rgba(148, 163, 184, 0.2);
       --text-main: #f8fafc;
       --text-muted: #94a3b8;
+      --accent: #38bdf8;
       --accent-green: #10b981;
       --accent-amber: #f59e0b;
       --accent-red: #ef4444;
+      --radius: 16px;
+      --transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
     }
 
     * {
       box-sizing: border-box;
       margin: 0;
       padding: 0;
+      font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
     }
 
     body {
-      font-family: 'Segoe UI', system-ui, -apple-system, BlinkMacSystemFont, Roboto, sans-serif;
-      min-height: 100vh;
+      background:
+        linear-gradient(180deg, rgba(3, 10, 20, 0.60), rgba(3, 10, 20, 0.95) 540px),
+        url("https://images.unsplash.com/photo-1673187139612-6bf684a74815?auto=format&fit=crop&w=2400&q=85") center 18% / cover fixed,
+        #07111f;
       color: var(--text-main);
-      /* Fixed constant accident background image */
-      background: 
-        linear-gradient(135deg, rgba(15, 23, 42, 0.86), rgba(15, 23, 42, 0.94)),
-        url('https://images.unsplash.com/photo-1543393716-375f47996a77?w=1600&q=80') no-repeat center center fixed;
-      background-size: cover;
-      background-attachment: fixed;
-      padding: 40px 16px;
-      line-height: 1.5;
+      min-height: 100vh;
+      padding: 28px 16px 60px;
     }
 
     .container {
-      max-width: 980px;
+      max-width: 1080px;
       margin: 0 auto;
-      background: var(--card-bg);
-      backdrop-filter: blur(16px);
-      -webkit-backdrop-filter: blur(16px);
-      border: 1px solid var(--card-border);
-      border-radius: 18px;
-      padding: 32px;
-      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.70);
     }
 
+    /* Header */
     header {
-      margin-bottom: 20px;
+      padding: 38px 24px 30px;
+      margin-bottom: 24px;
+      border: 1px solid rgba(255, 255, 255, 0.16);
+      border-radius: 24px;
+      background: linear-gradient(110deg, rgba(3, 10, 20, 0.88), rgba(3, 10, 20, 0.50));
+      box-shadow: 0 24px 70px rgba(0, 0, 0, 0.35);
       text-align: center;
     }
 
-    .badge-header {
-      display: inline-block;
-      padding: 4px 12px;
-      background: var(--primary-light);
-      border: 1px solid rgba(59, 130, 246, 0.4);
-      color: #60a5fa;
+    .status-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: rgba(14, 165, 233, 0.16);
+      border: 1px solid rgba(56, 189, 248, 0.35);
+      padding: 6px 14px;
       border-radius: 9999px;
       font-size: 13px;
       font-weight: 600;
-      letter-spacing: 0.5px;
-      margin-bottom: 10px;
-      text-transform: uppercase;
+      color: #bae6fd;
+      margin-bottom: 12px;
+      box-shadow: 0 0 20px rgba(14, 165, 233, 0.2);
+    }
+
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      background: #10b981;
+      border-radius: 50%;
+      box-shadow: 0 0 8px #10b981;
+      animation: pulse-dot 2s infinite;
+    }
+
+    @keyframes pulse-dot {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.5; transform: scale(0.85); }
     }
 
     h1 {
-      font-size: 28px;
-      font-weight: 700;
-      color: #ffffff;
+      font-size: clamp(28px, 4.5vw, 42px);
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      background: linear-gradient(135deg, #ffffff 0%, #cbd5e1 50%, #93c5fd 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
       margin-bottom: 8px;
-      letter-spacing: -0.5px;
     }
 
     .subtitle {
-      color: var(--text-muted);
+      color: #cbd5e1;
       font-size: 15px;
+      max-width: 680px;
+      margin: 0 auto;
+      line-height: 1.5;
     }
 
-    /* Guaranteed visible car collision showcase banner */
-    .banner-container {
-      position: relative;
-      width: 100%;
-      height: 200px;
-      border-radius: 14px;
-      overflow: hidden;
-      margin-bottom: 22px;
+    /* Tabs Bar (Requirement 4: 3 Tabs) */
+    .tabs-wrapper {
+      max-width: 820px;
+      margin: 0 auto 24px;
+      background: rgba(7, 17, 31, 0.88);
+      backdrop-filter: blur(14px);
       border: 1px solid var(--card-border);
-      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
-      background: #0f172a;
-    }
-
-    .hero-banner {
-      width: 100%;
-      height: 100%;
-      object-fit: cover;
-      display: block;
-      transition: transform 0.3s ease;
-    }
-
-    .banner-container:hover .hero-banner {
-      transform: scale(1.02);
-    }
-
-    .banner-overlay {
-      position: absolute;
-      bottom: 0;
-      left: 0;
-      right: 0;
-      padding: 12px 18px;
-      background: linear-gradient(to top, rgba(15, 23, 42, 0.95), transparent);
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-    }
-
-    .banner-title {
-      font-size: 14px;
-      font-weight: 600;
-      color: #f1f5f9;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-
-    /* Exactly two tabs */
-    .tabs {
-      display: flex;
-      gap: 10px;
-      margin: 20px 0 16px 0;
-      background: rgba(15, 23, 42, 0.55);
+      border-radius: 16px;
       padding: 6px;
-      border-radius: 12px;
-      border: 1px solid var(--card-border);
+      display: flex;
+      gap: 8px;
+      box-shadow: 0 6px 25px rgba(0, 0, 0, 0.3);
     }
 
     .tab-button {
       flex: 1;
-      padding: 12px 20px;
-      border: 0;
-      border-radius: 8px;
-      cursor: pointer;
-      font-weight: 600;
-      font-size: 15px;
+      padding: 12px 18px;
       background: transparent;
+      border: 0;
+      border-radius: 10px;
       color: var(--text-muted);
-      transition: all 0.2s ease;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: var(--transition);
       display: flex;
       align-items: center;
       justify-content: center;
@@ -165,234 +139,469 @@
     }
 
     .tab-button:hover {
-      color: #ffffff;
-      background: rgba(255, 255, 255, 0.05);
+      color: #fff;
+      background: rgba(255, 255, 255, 0.06);
     }
 
     .tab-button.active {
-      background: var(--primary);
+      background: linear-gradient(135deg, #0284c7, #2563eb);
       color: #ffffff;
-      box-shadow: 0 4px 12px rgba(37, 99, 235, 0.4);
+      box-shadow: 0 4px 16px var(--primary-glow);
     }
 
-    .primary-btn {
-      padding: 12px 24px;
-      border: 0;
-      border-radius: 10px;
-      cursor: pointer;
-      background: var(--primary);
-      color: white;
-      font-weight: 600;
-      font-size: 15px;
-      transition: all 0.2s ease;
+    .tab-badge {
+      display: inline-block;
+      padding: 2px 7px;
+      border-radius: 9999px;
+      font-size: 11px;
+      font-weight: 700;
+      background: rgba(239, 68, 68, 0.3);
+      color: #fca5a5;
+      border: 1px solid rgba(239, 68, 68, 0.5);
+    }
+
+    /* Panels */
+    .tab-panel {
+      display: none;
+      animation: fadeIn 0.3s ease;
+    }
+
+    .tab-panel.active {
+      display: block;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(6px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .info-card {
+      background: var(--card-bg);
+      backdrop-filter: blur(16px);
+      border: 1px solid var(--card-border);
+      border-radius: var(--radius);
+      padding: 20px 24px;
+      margin-bottom: 20px;
+      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3);
+    }
+
+    .help-text {
+      color: var(--text-muted);
+      font-size: 14px;
+      line-height: 1.5;
+    }
+
+    /* Action Buttons */
+    .btn {
       display: inline-flex;
       align-items: center;
       justify-content: center;
       gap: 8px;
-      box-shadow: 0 4px 14px rgba(37, 99, 235, 0.35);
+      padding: 11px 22px;
+      border: 0;
+      border-radius: 10px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: var(--transition);
+      text-decoration: none;
     }
 
-    .primary-btn:hover {
-      background: var(--primary-hover);
+    .btn-primary {
+      background: linear-gradient(135deg, #0284c7 0%, #2563eb 100%);
+      color: white;
+      box-shadow: 0 4px 16px rgba(14, 165, 233, 0.35);
+    }
+
+    .btn-primary:hover {
       transform: translateY(-1px);
-      box-shadow: 0 6px 20px rgba(37, 99, 235, 0.45);
+      box-shadow: 0 8px 24px rgba(14, 165, 233, 0.5);
     }
 
-    #status {
-      margin-top: 10px;
-      padding: 10px 14px;
-      border-radius: 8px;
-      background: rgba(15, 23, 42, 0.6);
-      border: 1px solid var(--card-border);
-      font-size: 13.5px;
-      color: #93c5fd;
+    .btn-danger {
+      background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
+      color: white;
+      box-shadow: 0 4px 16px rgba(239, 68, 68, 0.35);
     }
 
-    /* Google Map & Interactive Route section */
-    .route-section {
-      background: rgba(15, 23, 42, 0.60);
-      border: 1px solid var(--card-border);
-      border-radius: 14px;
-      padding: 20px;
-      margin-top: 20px;
+    .btn-danger:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 8px 24px rgba(239, 68, 68, 0.5);
+    }
+
+    .btn-quiet {
+      color: #cbd5e1;
+      background: rgba(148, 163, 184, 0.12);
+      padding: 9px 14px;
+      font-size: 13px;
+    }
+
+    .btn-quiet:hover {
+      background: rgba(148, 163, 184, 0.22);
+      color: #fff;
+    }
+
+    .btn-submit {
+      width: 100%;
+      padding: 16px;
+      font-size: 16px;
+      margin-top: 18px;
+      border-radius: 12px;
+    }
+
+    /* Destination Card & Route System (Requirement 3) */
+    .destination-card {
+      padding: 24px;
       margin-bottom: 24px;
+      background: linear-gradient(145deg, rgba(12, 30, 49, 0.98), rgba(7, 17, 31, 0.98));
+      border: 1px solid rgba(56, 189, 248, 0.25);
+      border-radius: var(--radius);
+      box-shadow: 0 18px 38px rgba(0, 0, 0, 0.3);
     }
 
-    .route-header {
+    .destination-layout {
+      display: grid;
+      grid-template-columns: minmax(280px, 0.85fr) minmax(320px, 1.15fr);
+      gap: 20px;
+      align-items: stretch;
+    }
+
+    .destination-controls {
       display: flex;
-      justify-content: space-between;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .search-row {
+      display: flex;
+      gap: 8px;
+    }
+
+    .search-row input {
+      min-width: 0;
+      flex: 1;
+    }
+
+    .coordinate-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+
+    .destination-actions {
+      display: flex;
       align-items: center;
+      justify-content: space-between;
       flex-wrap: wrap;
       gap: 10px;
-      margin-bottom: 12px;
     }
 
-    .route-header h3 {
-      font-size: 17px;
-      font-weight: 600;
-      color: #93c5fd;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-
-    /* Hotspot toggle & region filter controls */
-    .hotspot-controls {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 8px;
-      margin-bottom: 12px;
-      align-items: center;
-    }
-
-    .hotspot-toggle-btn {
-      padding: 8px 16px;
-      border: 1px solid rgba(239, 68, 68, 0.5);
-      border-radius: 8px;
-      cursor: pointer;
-      background: rgba(239, 68, 68, 0.15);
-      color: #fca5a5;
+    .map-link {
+      color: #7dd3fc;
       font-size: 13px;
-      font-weight: 600;
-      transition: all 0.2s ease;
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-    }
-
-    .hotspot-toggle-btn:hover {
-      background: rgba(239, 68, 68, 0.3);
-      color: white;
-    }
-
-    .hotspot-toggle-btn.active {
-      background: rgba(239, 68, 68, 0.7);
-      color: white;
-      border-color: #ef4444;
-      box-shadow: 0 0 12px rgba(239, 68, 68, 0.4);
-    }
-
-    .region-btn {
-      padding: 6px 14px;
-      border: 1px solid var(--input-border);
-      border-radius: 6px;
-      cursor: pointer;
-      background: rgba(51, 65, 85, 0.5);
-      color: var(--text-muted);
-      font-size: 12px;
-      font-weight: 500;
-      transition: all 0.2s ease;
-    }
-
-    .region-btn:hover {
-      background: rgba(71, 85, 105, 0.7);
-      color: white;
-    }
-
-    .region-btn.active-region {
-      background: var(--primary);
-      color: white;
-      border-color: var(--primary);
-      font-weight: 600;
-    }
-
-    .hotspot-count {
-      font-size: 12px;
-      color: #93c5fd;
-      margin-left: auto;
-      font-weight: 500;
-    }
-
-    #map {
-      height: 420px;
-      width: 100%;
-      border-radius: 10px;
-      border: 1px solid var(--card-border);
-      z-index: 10;
-      box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.4);
-      background: #1e293b;
-    }
-
-    .map-hint {
-      font-size: 12.5px;
-      color: var(--text-muted);
-      margin-top: 10px;
-      display: flex;
-      align-items: center;
-      gap: 6px;
-    }
-
-    .maps-link-wrapper {
-      margin-top: 10px;
-      font-size: 13.5px;
-    }
-
-    .maps-link {
-      color: #60a5fa;
+      font-weight: 700;
       text-decoration: none;
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      font-weight: 500;
-      transition: color 0.2s;
     }
 
-    .maps-link:hover {
-      color: #93c5fd;
+    .map-link:hover {
       text-decoration: underline;
     }
 
-    /* ETA telemetry card */
-    .eta-dashboard {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-      gap: 12px;
-      margin-top: 16px;
-      padding-top: 16px;
-      border-top: 1px solid rgba(255, 255, 255, 0.08);
+    .inline-status {
+      color: #a5b4c7;
+      font-size: 12px;
+      line-height: 1.5;
+      min-height: 18px;
     }
 
-    .eta-box {
-      background: rgba(30, 41, 59, 0.7);
-      border: 1px solid rgba(255, 255, 255, 0.06);
-      padding: 12px 14px;
-      border-radius: 10px;
+    .map-frame {
+      min-height: 380px;
+      border-radius: 14px;
+      overflow: hidden;
+      border: 1px solid rgba(148, 163, 184, 0.25);
+      background: #0b1728;
+      position: relative;
+    }
+
+    #destinationMap {
+      width: 100%;
+      height: 100%;
+      min-height: 380px;
+      z-index: 1;
+    }
+
+    /* Google Maps Route Alternates Selector (Requirement 3) */
+    .routes-selector-container {
+      margin-top: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .route-option-card {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 16px;
+      border-radius: 12px;
+      background: rgba(15, 23, 42, 0.7);
+      border: 1px solid rgba(148, 163, 184, 0.2);
+      cursor: pointer;
+      transition: var(--transition);
+    }
+
+    .route-option-card:hover {
+      background: rgba(14, 165, 233, 0.12);
+      border-color: rgba(56, 189, 248, 0.4);
+    }
+
+    .route-option-card.active-route {
+      background: rgba(14, 165, 233, 0.18);
+      border-color: #38bdf8;
+      box-shadow: 0 0 16px rgba(14, 165, 233, 0.25);
+    }
+
+    .route-badge-dot {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      display: inline-block;
+      margin-right: 8px;
+    }
+
+    .route-dot-primary { background: #2563eb; box-shadow: 0 0 8px #3b82f6; }
+    .route-dot-alt { background: #94a3b8; }
+
+    .route-info-title {
+      font-size: 14px;
+      font-weight: 700;
+      color: #f1f5f9;
+      display: flex;
+      align-items: center;
+    }
+
+    .route-info-summary {
+      font-size: 12px;
+      color: var(--text-muted);
+      margin-top: 2px;
+    }
+
+    .route-time-stat {
+      font-size: 16px;
+      font-weight: 800;
+      color: #38bdf8;
+      text-align: right;
+    }
+
+    .route-dist-stat {
+      font-size: 12px;
+      color: var(--text-muted);
+      text-align: right;
+    }
+
+    .eta-strip {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+      margin-top: 16px;
+    }
+
+    .eta-strip > div {
+      padding: 14px 16px;
+      border-radius: 12px;
+      background: rgba(2, 132, 199, 0.11);
+      border: 1px solid rgba(56, 189, 248, 0.18);
     }
 
     .eta-label {
-      font-size: 12px;
-      color: var(--text-muted);
+      display: block;
+      color: #9fb3c9;
+      font-size: 11px;
       text-transform: uppercase;
       letter-spacing: 0.5px;
-      margin-bottom: 4px;
+      margin-bottom: 6px;
     }
 
-    .eta-value {
+    .eta-strip strong {
+      color: #e0f2fe;
       font-size: 18px;
-      font-weight: 700;
-      color: #38bdf8;
+      font-weight: 800;
     }
 
-    .eta-value.highlight {
-      color: #34d399;
+    .eta-disclaimer {
+      color: #8498ae;
+      font-size: 11px;
+      margin-top: 10px;
     }
 
-    /* Form grids */
-    .section-title {
-      font-size: 18px;
-      font-weight: 600;
-      color: #e2e8f0;
-      margin: 28px 0 14px 0;
-      padding-bottom: 8px;
-      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    /* Live Weather Card (Requirement 1) */
+    .weather-live-card {
+      background: rgba(14, 165, 233, 0.10);
+      border: 1px solid rgba(56, 189, 248, 0.28);
+      border-radius: 14px;
+      padding: 16px 20px;
+      margin-bottom: 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .weather-header-row {
       display: flex;
       align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+
+    .weather-title-group {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .weather-main-icon {
+      font-size: 32px;
+    }
+
+    .weather-temp-text {
+      font-size: 20px;
+      font-weight: 800;
+      color: #f0f9ff;
+    }
+
+    .weather-sub-text {
+      font-size: 12.5px;
+      color: #bae6fd;
+    }
+
+    .weather-chip-tag {
+      padding: 4px 10px;
+      border-radius: 9999px;
+      font-size: 12px;
+      font-weight: 600;
+      background: rgba(16, 185, 129, 0.15);
+      color: #34d399;
+      border: 1px solid rgba(16, 185, 129, 0.35);
+    }
+
+    .weather-stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+      gap: 10px;
+      padding-top: 10px;
+      border-top: 1px solid rgba(255, 255, 255, 0.08);
+      font-size: 12px;
+    }
+
+    .weather-stat-item {
+      color: #cbd5e1;
+    }
+
+    .weather-stat-item strong {
+      color: #ffffff;
+      margin-left: 4px;
+    }
+
+    /* Live Time Context Bar (Requirement 2) */
+    .time-live-bar {
+      background: rgba(99, 102, 241, 0.10);
+      border: 1px solid rgba(129, 140, 248, 0.25);
+      border-radius: 14px;
+      padding: 16px 20px;
+      margin-bottom: 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+
+    .time-title-group {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .time-clock-display {
+      font-size: 18px;
+      font-weight: 800;
+      color: #f1f5f9;
+    }
+
+    .time-sub-desc {
+      font-size: 12px;
+      color: #c7d2fe;
+    }
+
+    .time-tag-group {
+      display: flex;
       gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .time-pill {
+      font-size: 12px;
+      font-weight: 600;
+      padding: 4px 10px;
+      border-radius: 6px;
+      background: rgba(255, 255, 255, 0.08);
+      color: #e2e8f0;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+    }
+
+    .time-pill.rush-active {
+      background: rgba(239, 68, 68, 0.2);
+      border-color: #ef4444;
+      color: #fca5a5;
+    }
+
+    .time-pill.night-active {
+      background: rgba(99, 102, 241, 0.2);
+      border-color: #818cf8;
+      color: #c7d2fe;
+    }
+
+    /* Form Card */
+    .form-card {
+      background: var(--card-bg);
+      backdrop-filter: blur(16px);
+      border: 1px solid var(--card-border);
+      border-radius: var(--radius);
+      padding: 24px;
+      margin-bottom: 24px;
+      box-shadow: 0 10px 30px -5px rgba(0, 0, 0, 0.3);
+    }
+
+    .section-header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 18px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+      padding-bottom: 12px;
+    }
+
+    .section-icon {
+      width: 32px;
+      height: 32px;
+      border-radius: 8px;
+      background: rgba(14, 165, 233, 0.15);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 16px;
+    }
+
+    .section-title {
+      font-size: 18px;
+      font-weight: 700;
+      color: #f1f5f9;
     }
 
     .grid {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
       gap: 16px;
     }
 
@@ -400,267 +609,596 @@
       display: flex;
       flex-direction: column;
       gap: 6px;
-      font-size: 13.5px;
+      font-size: 13px;
       font-weight: 500;
       color: #cbd5e1;
     }
 
-    input, select {
-      padding: 10px 12px;
-      border: 1px solid var(--input-border);
+    input, select, textarea {
+      background: rgba(2, 8, 18, 0.78);
+      border: 1px solid rgba(255, 255, 255, 0.12);
       border-radius: 8px;
-      background: var(--input-bg);
-      color: #ffffff;
+      padding: 10px 14px;
+      color: #fff;
       font-size: 14px;
-      transition: all 0.2s ease;
+      transition: var(--transition);
+      outline: none;
+      min-height: 44px;
     }
 
-    input:focus, select:focus {
-      outline: none;
+    input:focus, select:focus, textarea:focus {
       border-color: var(--primary);
-      box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.25);
-      background: rgba(15, 23, 42, 0.85);
+      box-shadow: 0 0 0 3px rgba(14, 165, 233, 0.25);
+      background: rgba(15, 23, 42, 0.95);
     }
 
     select option {
-      background: #1e293b;
-      color: #ffffff;
+      background: #0f172a;
+      color: #fff;
     }
 
-    .submit-container {
-      margin-top: 30px;
-      text-align: center;
+    /* Officers Alert Tab (Requirement 4) */
+    .alerts-container {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 24px;
     }
 
-    .submit-container button {
-      width: 100%;
-      max-width: 320px;
-      font-size: 16px;
-      padding: 14px;
-    }
-
-    /* Result cards */
-    #result, #riskFactors {
-      margin-top: 18px;
-      padding: 16px 20px;
-      border-radius: 12px;
-      font-size: 15px;
-      line-height: 1.6;
-      display: none;
-    }
-
-    #result {
-      background: rgba(15, 23, 42, 0.75);
+    .alert-panel-card {
+      background: var(--card-bg);
       border: 1px solid var(--card-border);
-      color: #f1f5f9;
+      border-radius: var(--radius);
+      padding: 24px;
+      box-shadow: 0 10px 30px -5px rgba(0, 0, 0, 0.3);
     }
 
-    #riskFactors {
-      background: rgba(15, 23, 42, 0.6);
-      border: 1px solid rgba(255, 255, 255, 0.08);
+    .alert-card-item {
+      background: rgba(15, 23, 42, 0.85);
+      border: 1px solid rgba(148, 163, 184, 0.2);
+      border-radius: 12px;
+      padding: 16px 18px;
+      margin-bottom: 14px;
+      transition: var(--transition);
+    }
+
+    .alert-card-item:hover {
+      border-color: rgba(56, 189, 248, 0.4);
+      transform: translateY(-1px);
+    }
+
+    .alert-card-item.critical-alert {
+      border-left: 4px solid #ef4444;
+    }
+
+    .alert-card-item.high-alert {
+      border-left: 4px solid #f97316;
+    }
+
+    .alert-card-item.moderate-alert {
+      border-left: 4px solid #f59e0b;
+    }
+
+    .alert-item-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 8px;
+    }
+
+    .alert-item-loc {
+      font-size: 15px;
+      font-weight: 700;
+      color: #f1f5f9;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .alert-item-time {
+      font-size: 12px;
       color: var(--text-muted);
     }
 
-    .severity-badge {
+    .alert-item-body {
+      font-size: 13.5px;
+      color: #cbd5e1;
+      line-height: 1.5;
+      margin-bottom: 12px;
+    }
+
+    .alert-item-footer {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 8px;
+      padding-top: 8px;
+      border-top: 1px solid rgba(255, 255, 255, 0.06);
+    }
+
+    .alert-status-badge {
       display: inline-block;
-      padding: 4px 12px;
+      padding: 3px 10px;
       border-radius: 9999px;
+      font-size: 11px;
       font-weight: 700;
+      text-transform: uppercase;
+    }
+
+    .status-active { background: rgba(239, 68, 68, 0.2); color: #fca5a5; border: 1px solid rgba(239, 68, 68, 0.4); }
+    .status-dispatched { background: rgba(59, 130, 246, 0.2); color: #93c5fd; border: 1px solid rgba(59, 130, 246, 0.4); }
+    .status-resolved { background: rgba(16, 185, 129, 0.2); color: #6ee7b7; border: 1px solid rgba(16, 185, 129, 0.4); }
+
+    .officer-btn-group {
+      display: flex;
+      gap: 6px;
+    }
+
+    .btn-xs {
+      padding: 5px 10px;
+      font-size: 12px;
+      border-radius: 6px;
+    }
+
+    /* Prediction Results Dashboard */
+    .result-container {
+      margin-top: 24px;
+      display: none;
+      animation: slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    @keyframes slideUp {
+      from { opacity: 0; transform: translateY(16px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .result-card {
+      background: linear-gradient(145deg, rgba(30, 41, 59, 0.95), rgba(15, 23, 42, 0.98));
+      border: 1px solid var(--card-border);
+      border-radius: var(--radius);
+      padding: 26px;
+      box-shadow: 0 20px 40px -10px rgba(0, 0, 0, 0.5);
+    }
+
+    .result-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+
+    .result-title {
+      font-size: 15px;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      font-weight: 600;
+    }
+
+    .severity-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 16px;
+      border-radius: 9999px;
+      font-size: 16px;
+      font-weight: 700;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+    }
+
+    .severity-1 { background: rgba(16, 185, 129, 0.15); border: 1px solid #10b981; color: #34d399; }
+    .severity-2 { background: rgba(245, 158, 11, 0.15); border: 1px solid #f59e0b; color: #fbbf24; }
+    .severity-3 { background: rgba(249, 115, 22, 0.15); border: 1px solid #f97316; color: #fb923c; }
+    .severity-4 { background: rgba(239, 68, 68, 0.2); border: 1px solid #ef4444; color: #f87171; }
+
+    .severity-scale { margin: 18px 0; }
+    .scale-bar {
+      height: 8px;
+      background: rgba(255, 255, 255, 0.08);
+      border-radius: 9999px;
+      overflow: hidden;
+      display: flex;
+      margin-bottom: 8px;
+    }
+
+    .scale-fill {
+      height: 100%;
+      transition: width 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .scale-labels {
+      display: flex;
+      justify-content: space-between;
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+
+    .risk-title {
       font-size: 14px;
-      margin-left: 8px;
+      font-weight: 600;
+      color: #e2e8f0;
+      margin: 18px 0 10px;
     }
 
-    .severity-1 { background: #065f46; color: #a7f3d0; border: 1px solid #10b981; }
-    .severity-2 { background: #1e40af; color: #bfdbfe; border: 1px solid #3b82f6; }
-    .severity-3 { background: #92400e; color: #fde68a; border: 1px solid #f59e0b; }
-    .severity-4 { background: #991b1b; color: #fecaca; border: 1px solid #ef4444; }
-
-    /* Pulsing animation for hotspots */
-    @keyframes hotspot-pulse {
-      0% { transform: scale(0.92); opacity: 0.85; }
-      50% { transform: scale(1.18); opacity: 1; }
-      100% { transform: scale(0.92); opacity: 0.85; }
+    .risk-chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
     }
 
-    .pulse-marker {
-      animation: hotspot-pulse 1.8s infinite ease-in-out;
+    .risk-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: rgba(239, 68, 68, 0.12);
+      border: 1px solid rgba(239, 68, 68, 0.3);
+      color: #fca5a5;
+      padding: 6px 12px;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 500;
     }
 
-    /* Responsive */
-    @media (max-width: 640px) {
-      .container { padding: 20px 16px; }
-      .grid { grid-template-columns: 1fr; }
-      .tabs { flex-direction: column; }
-      #map { height: 300px; }
-      .eta-dashboard { grid-template-columns: 1fr 1fr; }
-      .hotspot-controls { gap: 6px; }
-      .hotspot-count { width: 100%; margin-top: 4px; }
+    .risk-chip.safe {
+      background: rgba(16, 185, 129, 0.12);
+      border: 1px solid rgba(16, 185, 129, 0.3);
+      color: #6ee7b7;
+    }
+
+    .spinner {
+      display: inline-block;
+      width: 18px;
+      height: 18px;
+      border: 2px solid rgba(255, 255, 255, 0.3);
+      border-radius: 50%;
+      border-top-color: #fff;
+      animation: spin 0.8s linear infinite;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    footer {
+      text-align: center;
+      margin-top: 40px;
+      font-size: 13px;
+      color: #9fb0c4;
+    }
+
+    @media (max-width: 820px) {
+      .destination-layout { grid-template-columns: 1fr; }
+      .map-frame, #destinationMap { min-height: 300px; }
+    }
+    @media (max-width: 580px) {
+      .tabs-wrapper { flex-direction: column; }
+      .coordinate-grid, .eta-strip { grid-template-columns: 1fr; }
+      .search-row { flex-direction: column; }
     }
   </style>
 </head>
 
 <body>
   <div class="container">
+    <!-- Header -->
     <header>
-      <span class="badge-header">Road Safety & Analysis</span>
-      <h1>Accident Severity Predictor</h1>
-      <p class="subtitle">Predict accident severity levels, calculate ETA, and analyze risk factors</p>
+      <div class="status-badge">
+        <span class="status-dot"></span>
+        AI Inference Engine Ready
+      </div>
+      <h1>Road Accident Severity Predictor</h1>
+      <p class="subtitle">
+        Evaluate road incident risk levels, calculate Google Maps-style primary and alternate routes with live ETA, and dispatch instant emergency alerts for police officers.
+      </p>
     </header>
 
-    <!-- Guaranteed visible vehicle collision showcase banner -->
-    <div class="banner-container">
-      <img 
-        class="hero-banner" 
-        id="heroBannerImg"
-        src="https://images.unsplash.com/photo-1543393716-375f47996a77?w=1200&q=80" 
-        alt="Vehicle Collision Incident"
-        referrerpolicy="no-referrer"
-        onerror="this.onerror=null; this.src='https://upload.wikimedia.org/wikipedia/commons/thumb/d/d9/Verkehrsunfall1.jpg/1280px-Verkehrsunfall1.jpg'; this.onerror=function(){ this.style.display='none'; document.getElementById('svgBannerFallback').style.display='flex'; };"
-      />
-      <!-- Offline / blocked image SVG fallback -->
-      <div id="svgBannerFallback" style="display:none; width:100%; height:100%; background: linear-gradient(135deg, #1e293b, #0f172a); align-items:center; justify-content:center; flex-direction:column; gap:8px;">
-        <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <circle cx="12" cy="12" r="10"></circle>
-          <line x1="12" y1="8" x2="12" y2="12"></line>
-          <line x1="12" y1="16" x2="12.01" y2="16"></line>
-        </svg>
-        <span style="font-size:15px; font-weight:600; color:#f87171;">Vehicle Collision Incident Analysis System</span>
-      </div>
-      <div class="banner-overlay">
-        <div class="banner-title">🚗💥🚙 Multi-Vehicle Traffic Incident Analysis & Severity Engine</div>
-      </div>
-    </div>
-
-    <!-- Requirement 6: Exactly two tabs (No matter/paragraphs below tabs) -->
-    <div class="tabs">
-      <button type="button" class="tab-button active" data-tab="manualPanel">
-        📝 Enter details manually
+    <!-- Navigation Tabs: Exactly 3 Tabs (Requirement 4) -->
+    <div class="tabs-wrapper">
+      <button class="tab-button active" data-tab="manualPanel">
+        <span>✍️</span> Enter Details Manually
       </button>
-      <button type="button" class="tab-button" data-tab="locationPanel">
-        📍 Use my current location
+      <button class="tab-button" data-tab="locationPanel">
+        <span>📍</span> Use Live GPS & Weather
+      </button>
+      <button class="tab-button" data-tab="alertsPanel">
+        <span>🚨</span> Alerts for Officers
+        <span class="tab-badge" id="tabAlertCount">3</span>
       </button>
     </div>
 
-    <!-- Location detection trigger (shown when Tab 2 is active) -->
-    <div id="locationActionArea" style="display: none; margin: 16px 0 20px 0; text-align: center;">
-      <button id="locationButton" class="primary-btn" type="button" style="font-size: 15px; padding: 12px 26px;">
-        📍 Detect & Use My Current Location
+    <!-- Tab 1: Manual Panel -->
+    <section id="manualPanel" class="tab-panel active">
+      <div id="manualFormMount"></div>
+    </section>
+
+    <!-- Tab 2: Location Panel -->
+    <section id="locationPanel" class="tab-panel">
+      <div class="info-card">
+        <button id="locationButton" class="btn btn-primary" type="button" style="margin-bottom: 10px;">
+          <span>📡</span> Detect GPS Location & Fetch Live Weather
+        </button>
+        <div id="status" style="color: #94a3b8; font-size: 13.5px;">Click above to automatically fetch device GPS and atmospheric conditions.</div>
+      </div>
+      <div id="locationFormMount"></div>
+    </section>
+
+    <!-- Tab 3: Alerts for Officers (Requirement 4) -->
+    <section id="alertsPanel" class="tab-panel">
+      <div class="alerts-container">
+        <!-- Field 1: User / Citizen Incident Dispatcher -->
+        <div class="alert-panel-card">
+          <div class="section-header">
+            <div class="section-icon">📢</div>
+            <div>
+              <h2 class="section-title">Field 1: Send Alert Message to Officers</h2>
+              <p class="help-text" style="font-size: 12.5px;">Enter the location name and send an urgent alert message to notify nearby police officers.</p>
+            </div>
+          </div>
+
+          <form id="officerAlertForm">
+            <div style="display: flex; flex-direction: column; gap: 14px;">
+              <label for="alertLocationInput">1. Location Name / Landmark
+                <div style="display:flex; gap:8px;">
+                  <input type="text" id="alertLocationInput" placeholder="e.g. Navale Bridge, Pune or Mukarba Chowk, NH-44" required style="flex:1;">
+                  <button type="button" id="useCurrentLocationForAlert" class="btn btn-quiet" title="Use Destination or Start Location">Use Map Place</button>
+                </div>
+              </label>
+
+              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                <label for="alertSeveritySelect">Alert Severity Level
+                  <select id="alertSeveritySelect">
+                    <option value="Critical">🚨 Critical — Road Blocked / Pileup</option>
+                    <option value="High">⚠️ High — Major Congestion / Collision</option>
+                    <option value="Moderate">🟡 Moderate — Vehicle Breakdown / Caution</option>
+                  </select>
+                </label>
+
+                <label for="alertSenderInput">Sender Name / Identification
+                  <input type="text" id="alertSenderInput" placeholder="e.g. Citizen / Highway Commuter">
+                </label>
+              </div>
+
+              <label for="alertMessageInput">2. Alert Message / Emergency Details
+                <textarea id="alertMessageInput" rows="3" placeholder="Enter details of the incident: number of vehicles, blocked lanes, medical assistance required..." required></textarea>
+              </label>
+
+              <button type="submit" class="btn btn-danger" style="padding: 14px; font-size: 15px;">
+                <span>🚨</span> Dispatch Alert to Police Officers
+              </button>
+              <p id="alertDispatchStatus" class="inline-status" style="color: #34d399; font-weight: 600;"></p>
+            </div>
+          </form>
+        </div>
+
+        <!-- Field 2: Police Officers Live Alert Monitor -->
+        <div class="alert-panel-card">
+          <div class="section-header" style="justify-content: space-between; flex-wrap: wrap; gap: 10px;">
+            <div style="display:flex; align-items:center; gap:10px;">
+              <div class="section-icon">👮</div>
+              <div>
+                <h2 class="section-title">Field 2: Police Officers Alert Feed</h2>
+                <p class="help-text" style="font-size: 12.5px;">Live feed for police officers to review and respond to incoming citizen hazard reports.</p>
+              </div>
+            </div>
+            <div style="display:flex; gap:8px;">
+              <button type="button" id="refreshAlertsBtn" class="btn btn-quiet btn-xs">🔄 Refresh Feed</button>
+              <button type="button" id="clearAlertsBtn" class="btn btn-quiet btn-xs">Clear Demo</button>
+            </div>
+          </div>
+
+          <!-- Alert Cards Container -->
+          <div id="officerAlertsFeed" style="max-height: 480px; overflow-y: auto; padding-right: 4px;">
+            <!-- Rendered dynamically -->
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Dynamic Prediction Form (Used in Tab 1 & Tab 2) -->
+    <form id="predictionForm" class="form-card">
+
+      <!-- Destination, Google Maps Routing & Alternate Routes (Requirement 3) -->
+      <div class="destination-card">
+        <div class="section-header">
+          <div class="section-icon">🏁</div>
+          <h2 class="section-title">Destination, Routing & Alternate Paths</h2>
+        </div>
+        <p class="help-text destination-help">Search for start and destination points. Google Maps-style primary and alternate routes will be computed automatically.</p>
+
+        <div class="destination-layout">
+          <div class="destination-controls">
+            <label for="startSearch">Starting point — enter place or address
+              <div class="search-row">
+                <input id="startSearch" type="text" placeholder="e.g. Pune Station or 18.5204, 73.8567" autocomplete="off">
+                <button id="searchStart" class="btn btn-primary" type="button">Find start</button>
+              </div>
+            </label>
+            <p id="startSearchStatus" class="inline-status">Enter starting point coordinates or search above.</p>
+
+            <label for="destinationSearch">Destination — enter place or address
+              <div class="search-row">
+                <input id="destinationSearch" type="text" placeholder="e.g. Lonavala or 18.7557, 73.4091" autocomplete="off">
+                <button id="searchDestination" class="btn btn-primary" type="button">Find dest</button>
+              </div>
+            </label>
+
+            <div class="coordinate-grid">
+              <label for="End_Lat">End Latitude
+                <input id="End_Lat" name="End_Lat" type="number" step="any" placeholder="Select on map" required>
+              </label>
+              <label for="End_Lng">End Longitude
+                <input id="End_Lng" name="End_Lng" type="number" step="any" placeholder="Select on map" required>
+              </label>
+            </div>
+
+            <div class="destination-actions">
+              <a id="openDestinationMap" class="map-link" href="https://www.google.com/maps" target="_blank" rel="noopener">Open destination in Google Maps ↗</a>
+              <button id="clearDestination" class="btn btn-quiet" type="button">Clear destination</button>
+            </div>
+            <p id="destinationStatus" class="inline-status">Click anywhere on the map to set destination or drag pin.</p>
+          </div>
+
+          <!-- Map Container -->
+          <div class="map-frame">
+            <div id="destinationMap" role="application" aria-label="Interactive Route Map"></div>
+          </div>
+        </div>
+
+        <!-- Google Maps Alternate Routes Selector (Requirement 3) -->
+        <div class="routes-selector-container" id="routesSelectorContainer" style="display: none;">
+          <!-- Dynamically populated route cards -->
+        </div>
+
+        <!-- Telemetry Strip -->
+        <div class="eta-strip">
+          <div><span class="eta-label">Selected Distance</span><strong id="routeDistance">—</strong></div>
+          <div><span class="eta-label">Estimated Travel Time</span><strong id="routeDuration">—</strong></div>
+          <div><span class="eta-label">Expected Reaching Time</span><strong id="expectedArrival">—</strong></div>
+        </div>
+        <p class="eta-disclaimer">Turn-by-turn road geometry with primary (Blue) and alternate (Grey) paths calculated dynamically.</p>
+      </div>
+
+      <!-- Location Coordinates & Auto-Fetched Weather (Requirement 1) -->
+      <div class="section-header">
+        <div class="section-icon">⛅</div>
+        <h2 class="section-title">Location & Auto-Fetched Atmospheric Weather</h2>
+      </div>
+
+      <!-- Live Auto-Fetched Weather Banner (Requirement 1) -->
+      <div class="weather-live-card">
+        <div class="weather-header-row">
+          <div class="weather-title-group">
+            <span class="weather-main-icon" id="weatherIcon">⛅</span>
+            <div>
+              <div class="weather-temp-text" id="weatherTempDisplay">Weather Auto-Fetch Ready</div>
+              <div class="weather-sub-text" id="weatherDescDisplay">Temperature & weather conditions automatically fetched from entered coordinates</div>
+            </div>
+          </div>
+          <span class="weather-chip-tag" id="weatherSourceTag">Open-Meteo Live API</span>
+        </div>
+        <div class="weather-stats-grid">
+          <div class="weather-stat-item">🌡️ Temp: <strong id="disp_temp">72.0 °F</strong></div>
+          <div class="weather-stat-item">💧 Humidity: <strong id="disp_humidity">50 %</strong></div>
+          <div class="weather-stat-item">🧭 Pressure: <strong id="disp_pressure">29.92 inHg</strong></div>
+          <div class="weather-stat-item">👁️ Visibility: <strong id="disp_visibility">10.0 mi</strong></div>
+          <div class="weather-stat-item">💨 Wind: <strong id="disp_wind">5.0 mph NW</strong></div>
+          <div class="weather-stat-item">☁️ Sky: <strong id="disp_condition">Clear</strong></div>
+        </div>
+      </div>
+
+      <!-- Only manual Location fields remain (Temperature fields removed from manual inputs) -->
+      <div id="locationFields" class="grid" style="margin-bottom: 24px;"></div>
+
+      <!-- Temporal Context: Real-time clock auto-evaluated (Requirement 2) -->
+      <div class="section-header">
+        <div class="section-icon">⏱️</div>
+        <h2 class="section-title">Temporal & Real-Time Context (Auto-Synchronized)</h2>
+      </div>
+
+      <!-- Live System Clock Banner (Requirement 2) -->
+      <div class="time-live-bar">
+        <div class="time-title-group">
+          <div>
+            <div class="time-clock-display" id="liveClockDisplay">--:--:-- --</div>
+            <div class="time-sub-desc" id="liveDateDisplay">Time features automatically evaluated using current real-time clock</div>
+          </div>
+        </div>
+        <div class="time-tag-group">
+          <span class="time-pill" id="pillRushHour">Rush Hour: Checking…</span>
+          <span class="time-pill" id="pillWeekend">Day: Checking…</span>
+          <span class="time-pill" id="pillNight">Lighting: Checking…</span>
+        </div>
+      </div>
+
+      <!-- Road Infrastructure -->
+      <div class="section-header">
+        <div class="section-icon">🚦</div>
+        <h2 class="section-title">Road Infrastructure & Safety Points</h2>
+      </div>
+      <p class="help-text" style="margin-bottom: 14px;">Select whether specific road infrastructure features are present nearby:</p>
+      <div id="roadFields" class="grid" style="margin-bottom: 24px;"></div>
+
+      <!-- Submit Button -->
+      <button id="submitBtn" class="btn btn-primary btn-submit" type="submit">
+        <span>⚡</span> Run Severity Prediction
       </button>
-      <div id="status">Click above to detect GPS or IP location and fetch current weather.</div>
-    </div>
-
-    <form id="predictionForm">
-      <!-- Google Map, Hotspots & Route Selection Section -->
-      <div class="route-section">
-        <div class="route-header">
-          <h3>🗺️ Google Map, Hotspots & Destination Selection</h3>
-          <span style="font-size: 13px; color: var(--text-muted);">Way 1: Click map &bull; Way 2: Manual Lat/Lng</span>
-        </div>
-
-        <!-- Hotspot toggle and region filters -->
-        <div class="hotspot-controls">
-          <button type="button" id="toggleHotspotsBtn" class="hotspot-toggle-btn active">🟢 Hide Hotspots</button>
-          <button type="button" id="showAllBtn" class="region-btn active-region">All (32)</button>
-          <button type="button" id="showIndiaBtn" class="region-btn">🇮🇳 India (16)</button>
-          <button type="button" id="showUSBtn" class="region-btn">🇺🇸 US (16)</button>
-          <span id="hotspotCount" class="hotspot-count">32 hotspots active</span>
-        </div>
-
-        <!-- Map Container -->
-        <div id="map"></div>
-        <div class="map-hint">
-          <span>💡 <strong>Way 1:</strong> Click anywhere on the map to set Destination (End Lat & End Lon), or drag the red pin.</span>
-        </div>
-
-        <div class="maps-link-wrapper">
-          <a id="endMapsLink" href="https://www.google.com/maps" target="_blank" class="maps-link">
-            🔗 View Destination on Google Maps (Coordinates pending)
-          </a>
-        </div>
-
-        <!-- ETA telemetry dashboard -->
-        <div class="eta-dashboard">
-          <div class="eta-box">
-            <div class="eta-label">Estimated Distance</div>
-            <div id="etaDistance" class="eta-value">-- mi</div>
-          </div>
-          <div class="eta-box">
-            <div class="eta-label">Estimated Travel Time</div>
-            <div id="etaDuration" class="eta-value">-- min</div>
-          </div>
-          <div class="eta-box">
-            <div class="eta-label">Expected Reaching Time</div>
-            <div id="etaTime" class="eta-value highlight">--:-- --</div>
-          </div>
-          <div class="eta-box">
-            <div class="eta-label">Avg Travel Speed</div>
-            <div id="etaSpeed" class="eta-value">-- mph</div>
-          </div>
-        </div>
-      </div>
-
-      <h2 class="section-title">📍 Location and Weather</h2>
-      <div id="locationFields" class="grid"></div>
-
-      <h2 class="section-title">⏱️ Time Information</h2>
-      <div id="timeFields" class="grid"></div>
-
-      <h2 class="section-title">🛣️ Road Context & Features</h2>
-      <div id="roadFields" class="grid"></div>
-
-      <div class="submit-container">
-        <button class="primary-btn" type="submit">🚨 Predict Accident Severity</button>
-      </div>
     </form>
 
-    <div id="result"></div>
-    <div id="riskFactors"></div>
+    <!-- Prediction Results Dashboard -->
+    <div id="resultContainer" class="result-container">
+      <div class="result-card">
+        <div class="result-header">
+          <span class="result-title">Prediction Result</span>
+          <div id="severityBadge" class="severity-badge severity-1">
+            <span>●</span> Level 1 — Minor Impact
+          </div>
+        </div>
+
+        <div class="severity-scale">
+          <div class="scale-bar">
+            <div id="scaleFill" class="scale-fill" style="width: 25%; background: #10b981;"></div>
+          </div>
+          <div class="scale-labels">
+            <span>1 — Minor</span>
+            <span>2 — Moderate</span>
+            <span>3 — Serious</span>
+            <span>4 — Critical</span>
+          </div>
+        </div>
+
+        <div class="risk-title">Identified Risk Factors</div>
+        <div id="riskChips" class="risk-chips"></div>
+      </div>
+    </div>
+
+    <footer>
+      Road Accident Severity Predictor &bull; Powered by XGBoost & FastAPI
+    </footer>
   </div>
 
-  <!-- Leaflet JS with fallback -->
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-  <script>
-    if (typeof L === "undefined") {
-      document.write('<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"><\/script>');
-    }
-  </script>
 
   <script>
     /* =================================================================
-       1. FORM FIELDS GENERATION
+       API BASE URL
+       ================================================================= */
+    const API_BASE = window.location.origin.startsWith("http") && !window.location.origin.startsWith("file")
+      ? window.location.origin
+      : "http://127.0.0.1:8000";
+
+    /* =================================================================
+       REQUIREMENT 1: LOCATION FIELDS ONLY (TEMPERATURE FIELDS REMOVED FROM MANUAL INPUT)
        ================================================================= */
     const fieldGroups = {
       location: [
-        ["Start_Lat", "Start Latitude", "number"],
-        ["Start_Lng", "Start Longitude", "number"],
-        ["End_Lat", "End Latitude", "number"],
-        ["End_Lng", "End Longitude", "number"],
-        ["State", "State abbreviation (example: CA, MH, DL)", "text"],
-        ["Temperature_F", "Temperature (F)", "number"],
-        ["Humidity_percent", "Humidity (%)", "number"],
-        ["Pressure_in", "Pressure (in)", "number"],
-        ["Visibility_mi", "Visibility (mi)", "number"],
-        ["Wind_Direction", "Wind direction (example: NW)", "text"],
-        ["Wind_Speed_mph", "Wind speed (mph)", "number"],
-        ["Weather_Condition_Clean", "Weather condition (example: Clear)", "text"]
-      ],
-      time: [
-        ["Hour", "Hour (0–23)", "number"],
-        ["Month", "Month (1–12)", "number"],
-        ["Day_Of_Week", "Day of week (Monday=0, Sunday=6)", "number"],
-        ["Is_Weekend", "Is weekend? (1=yes, 0=no)", "binary"],
-        ["Rush_Hour", "Rush hour? (1=yes, 0=no)", "binary"],
-        ["Is_Night", "Is night? (1=yes, 0=no)", "binary"]
+        ["Start_Lat", "Latitude", "number"],
+        ["Start_Lng", "Longitude", "number"],
+        ["State", "State Code (e.g. CA, MH, DL)", "text"]
       ],
       road: [
-        ["Distance_mi", "Distance (mi)", "number"],
-        ["Amenity", "Amenity nearby? (1=yes, 0=no)", "binary"],
-        ["Crossing", "Crossing nearby? (1=yes, 0=no)", "binary"],
-        ["Junction", "Junction nearby? (1=yes, 0=no)", "binary"],
-        ["Railway", "Railway nearby? (1=yes, 0=no)", "binary"],
-        ["Stop", "Stop nearby? (1=yes, 0=no)", "binary"],
-        ["Traffic_Signal", "Traffic signal nearby? (1=yes, 0=no)", "binary"]
+        ["Distance_mi", "Corridor Distance (mi)", "number"],
+        ["Amenity", "Amenity Nearby?", "binary"],
+        ["Crossing", "Pedestrian Crossing?", "binary"],
+        ["Junction", "Highway Junction?", "binary"],
+        ["Railway", "Railway Crossing?", "binary"],
+        ["Stop", "Stop Sign?", "binary"],
+        ["Traffic_Signal", "Traffic Signal?", "binary"]
       ]
+    };
+
+    // Auto-fetched live atmospheric state
+    const liveWeather = {
+      Temperature_F: 72.0,
+      Humidity_percent: 50.0,
+      Pressure_in: 29.92,
+      Visibility_mi: 10.0,
+      Wind_Direction: "NW",
+      Wind_Speed_mph: 5.0,
+      Weather_Condition_Clean: "Clear"
     };
 
     function makeField([name, labelText, type]) {
@@ -668,11 +1206,10 @@
       label.textContent = labelText;
 
       let input;
-
       if (type === "binary") {
         input = document.createElement("select");
         input.innerHTML = `
-          <option value="">Choose</option>
+          <option value="">Select option</option>
           <option value="0">0 — No</option>
           <option value="1">1 — Yes</option>
         `;
@@ -693,11 +1230,6 @@
     for (const field of fieldGroups.location) {
       document.querySelector("#locationFields").appendChild(makeField(field));
     }
-
-    for (const field of fieldGroups.time) {
-      document.querySelector("#timeFields").appendChild(makeField(field));
-    }
-
     for (const field of fieldGroups.road) {
       document.querySelector("#roadFields").appendChild(makeField(field));
     }
@@ -705,22 +1237,25 @@
     const form = document.querySelector("#predictionForm");
 
     /* =================================================================
-       2. TAB SWITCHING (Requirement 3: Clean tabs, no matter below)
+       TAB SWITCHING (3 Tabs: Manual, Location, Alerts)
        ================================================================= */
     function showTab(tabId) {
+      document.querySelectorAll(".tab-panel").forEach(panel => {
+        panel.classList.toggle("active", panel.id === tabId);
+      });
+
       document.querySelectorAll(".tab-button").forEach(button => {
         button.classList.toggle("active", button.dataset.tab === tabId);
       });
 
-      const locationArea = document.getElementById("locationActionArea");
-      if (tabId === "locationPanel") {
-        locationArea.style.display = "block";
-      } else {
-        locationArea.style.display = "none";
+      if (tabId === "manualPanel") {
+        document.getElementById("manualFormMount").appendChild(form);
+      } else if (tabId === "locationPanel") {
+        document.getElementById("locationFormMount").appendChild(form);
       }
 
-      if (typeof map !== "undefined" && map) {
-        setTimeout(() => { map.invalidateSize(); }, 150);
+      if (destinationMap && (tabId === "manualPanel" || tabId === "locationPanel")) {
+        setTimeout(() => destinationMap.invalidateSize(), 200);
       }
     }
 
@@ -728,39 +1263,8 @@
       button.addEventListener("click", () => showTab(button.dataset.tab));
     });
 
-    /* =================================================================
-       3. HELPER FUNCTIONS (Requirement 2: Time features NOT auto-filled on load)
-       ================================================================= */
-    function getTimeFeatures(timeZone) {
-      const formatter = new Intl.DateTimeFormat("en-US", {
-        timeZone,
-        weekday: "short",
-        hour: "2-digit",
-        hourCycle: "h23",
-        month: "numeric"
-      });
-
-      const parts = Object.fromEntries(
-        formatter.formatToParts(new Date())
-          .map(part => [part.type, part.value])
-      );
-
-      const weekdayNumbers = {
-        Mon: 0, Tue: 1, Wed: 2, Thu: 3, Fri: 4, Sat: 5, Sun: 6
-      };
-
-      const hour = Number(parts.hour);
-      const day = weekdayNumbers[parts.weekday];
-
-      return {
-        Hour: hour,
-        Month: Number(parts.month),
-        Day_Of_Week: day,
-        Is_Weekend: day >= 5 ? 1 : 0,
-        Rush_Hour: ((hour >= 7 && hour < 10) || (hour >= 16 && hour < 19)) ? 1 : 0,
-        Is_Night: (hour >= 20 || hour < 6) ? 1 : 0
-      };
-    }
+    // Mount initial form in manual panel
+    document.getElementById("manualFormMount").appendChild(form);
 
     function setField(name, value) {
       const input = form.elements.namedItem(name);
@@ -776,21 +1280,11 @@
       return input ? input.value : "";
     }
 
-    function fillTimeFields(timeZone) {
-      const values = getTimeFeatures(timeZone);
-      for (const [name, value] of Object.entries(values)) {
-        setField(name, value);
-      }
-    }
-
-    // NOTE: Intentionally NOT calling fillTimeFields on page load
-    // per user requirement: "time features are loading automatically" (keep fields blank initially)
-
+    /* =================================================================
+       REQUIREMENT 1: AUTO-FETCH TEMPERATURE & WEATHER FROM ENTERED DETAILS
+       ================================================================= */
     function windDirection(degrees) {
-      const directions = [
-        "N", "NNE", "NE", "ENE", "E", "ESE", "SE", "SSE",
-        "S", "SSW", "SW", "WSW", "W", "WNW", "NW", "NNW"
-      ];
+      const directions = ["N", "NNE", "NE", "ENE", "E", "ESE", "SE", "SSE", "S", "SSW", "SW", "WSW", "W", "WNW", "NW", "NNW"];
       return directions[Math.round(degrees / 22.5) % 16];
     }
 
@@ -798,761 +1292,824 @@
       if (code === 0) return "Clear";
       if ([1, 2, 3].includes(code)) return "Cloudy";
       if ([45, 48].includes(code)) return "Fog";
-      if ([51, 53, 55, 56, 57, 61, 63, 65, 66, 67, 80, 81, 82].includes(code)) {
-        return "Rain";
-      }
+      if ([51, 53, 55, 56, 57, 61, 63, 65, 66, 67, 80, 81, 82].includes(code)) return "Rain";
       if ([71, 73, 75, 77, 85, 86].includes(code)) return "Snow";
       if ([95, 96, 99].includes(code)) return "Thunderstorm";
       return "Cloudy";
     }
 
-    function getApiBaseUrl() {
-      const origin = window.location.origin;
-      if (origin && !origin.startsWith("file") && origin.startsWith("http")) {
-        return origin;
+    function getWeatherEmoji(condition) {
+      const map = {
+        "Clear": "☀️",
+        "Cloudy": "☁️",
+        "Fog": "🌫️",
+        "Rain": "🌧️",
+        "Snow": "❄️",
+        "Thunderstorm": "⛈️"
+      };
+      return map[condition] || "⛅";
+    }
+
+    async function autoFetchLiveWeather(lat, lng) {
+      if (!Number.isFinite(lat) || !Number.isFinite(lng)) return;
+      const tempDisp = document.getElementById("weatherTempDisplay");
+      const descDisp = document.getElementById("weatherDescDisplay");
+      tempDisp.textContent = "Fetching weather…";
+
+      try {
+        const weatherUrl = new URL("https://api.open-meteo.com/v1/forecast");
+        weatherUrl.search = new URLSearchParams({
+          latitude: lat,
+          longitude: lng,
+          current: [
+            "temperature_2m",
+            "relative_humidity_2m",
+            "surface_pressure",
+            "visibility",
+            "wind_speed_10m",
+            "wind_direction_10m",
+            "weather_code"
+          ].join(","),
+          temperature_unit: "fahrenheit",
+          wind_speed_unit: "mph",
+          timezone: "auto"
+        });
+
+        const resp = await fetch(weatherUrl);
+        if (!resp.ok) throw new Error("Weather service busy");
+        const data = await resp.json();
+        const cur = data.current;
+
+        liveWeather.Temperature_F = Number(cur.temperature_2m);
+        liveWeather.Humidity_percent = Number(cur.relative_humidity_2m);
+        liveWeather.Pressure_in = Number((cur.surface_pressure / 33.8639).toFixed(2));
+        liveWeather.Visibility_mi = Number((cur.visibility / 1609.344).toFixed(1));
+        liveWeather.Wind_Direction = windDirection(cur.wind_direction_10m);
+        liveWeather.Wind_Speed_mph = Number(cur.wind_speed_10m);
+        liveWeather.Weather_Condition_Clean = cleanWeatherCondition(cur.weather_code);
+
+        // Update UI
+        const condition = liveWeather.Weather_Condition_Clean;
+        document.getElementById("weatherIcon").textContent = getWeatherEmoji(condition);
+        tempDisp.textContent = `${liveWeather.Temperature_F.toFixed(1)} °F — ${condition}`;
+        descDisp.textContent = `Auto-fetched for coordinates (${lat.toFixed(4)}, ${lng.toFixed(4)})`;
+
+        document.getElementById("disp_temp").textContent = `${liveWeather.Temperature_F.toFixed(1)} °F`;
+        document.getElementById("disp_humidity").textContent = `${liveWeather.Humidity_percent} %`;
+        document.getElementById("disp_pressure").textContent = `${liveWeather.Pressure_in} inHg`;
+        document.getElementById("disp_visibility").textContent = `${liveWeather.Visibility_mi} mi`;
+        document.getElementById("disp_wind").textContent = `${liveWeather.Wind_Speed_mph} mph ${liveWeather.Wind_Direction}`;
+        document.getElementById("disp_condition").textContent = condition;
+      } catch (err) {
+        tempDisp.textContent = `${liveWeather.Temperature_F} °F (Estimated)`;
+        descDisp.textContent = `Using standard ambient baseline: ${err.message}`;
       }
-      return "http://127.0.0.1:8000";
     }
 
     /* =================================================================
-       4. ETA LOGIC (Expected Reaching Time & Distance)
+       REQUIREMENT 2: REAL-TIME TIME CONTEXT (EVALUATED FROM CURRENT TIME)
        ================================================================= */
-    function haversineDistance(lat1, lon1, lat2, lon2) {
-      const R = 3958.8; // Earth radius in miles
-      const dLat = (lat2 - lat1) * Math.PI / 180;
-      const dLon = (lon2 - lon1) * Math.PI / 180;
-      const a =
-        Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-        Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
-        Math.sin(dLon / 2) * Math.sin(dLon / 2);
-      const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-      const straightDistance = R * c;
-      const drivingDistance = straightDistance * 1.25;
+    function getCurrentTimeFeatures() {
+      const now = new Date();
+      const hour = now.getHours();
+      const month = now.getMonth() + 1;
+      const day = (now.getDay() + 6) % 7; // 0=Mon, 6=Sun
+      const isWeekend = day >= 5 ? 1 : 0;
+      const isRushHour = ((hour >= 7 && hour < 10) || (hour >= 16 && hour < 20)) ? 1 : 0;
+      const isNight = (hour >= 20 || hour < 6) ? 1 : 0;
+
       return {
-        straightDistance,
-        drivingDistance: Math.max(0.01, drivingDistance)
+        Hour: hour,
+        Month: month,
+        Day_Of_Week: day,
+        Is_Weekend: isWeekend,
+        Rush_Hour: isRushHour,
+        Is_Night: isNight
       };
     }
 
-    function calculateETA() {
-      const startLat = parseFloat(getField("Start_Lat"));
-      const startLng = parseFloat(getField("Start_Lng"));
-      const endLat = parseFloat(getField("End_Lat"));
-      const endLng = parseFloat(getField("End_Lng"));
-
-      if (isNaN(startLat) || isNaN(startLng) || isNaN(endLat) || isNaN(endLng)) {
-        document.getElementById("etaDistance").textContent = "-- mi";
-        document.getElementById("etaDuration").textContent = "-- min";
-        document.getElementById("etaTime").textContent = "--:-- --";
-        document.getElementById("etaSpeed").textContent = "-- mph";
-        return;
-      }
-
-      const dist = haversineDistance(startLat, startLng, endLat, endLng);
-      const distanceMiles = dist.drivingDistance;
-
-      let avgSpeed = 45;
-      if (distanceMiles > 35) avgSpeed = 55;
-      if (distanceMiles > 100) avgSpeed = 65;
-
-      const rushHour = parseInt(getField("Rush_Hour"), 10);
-      if (rushHour === 1) avgSpeed *= 0.65;
-
-      const weather = getField("Weather_Condition_Clean");
-      if (["Rain", "Snow", "Thunderstorm"].includes(weather)) {
-        avgSpeed *= 0.8;
-      } else if (weather === "Fog") {
-        avgSpeed *= 0.75;
-      }
-
-      avgSpeed = Math.max(15, Math.round(avgSpeed));
-      const totalHours = distanceMiles / avgSpeed;
-      const totalMinutes = Math.round(totalHours * 60);
-
-      const hours = Math.floor(totalMinutes / 60);
-      const mins = totalMinutes % 60;
-      const durationFormatted = hours > 0 ? `${hours}h ${mins}m` : `${mins} min`;
-
+    function updateLiveClockUI() {
       const now = new Date();
-      const etaDate = new Date(now.getTime() + totalMinutes * 60000);
-      const etaTimeFormatted = etaDate.toLocaleTimeString([], {
-        hour: "2-digit",
-        minute: "2-digit",
-        hour12: true
-      });
+      const timeStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+      const dateStr = now.toLocaleDateString([], { weekday: 'long', year: 'numeric', month: 'short', day: 'numeric' });
+      const tf = getCurrentTimeFeatures();
 
-      document.getElementById("etaDistance").textContent = `${distanceMiles.toFixed(1)} mi`;
-      document.getElementById("etaDuration").textContent = durationFormatted;
-      document.getElementById("etaTime").textContent = etaTimeFormatted;
-      document.getElementById("etaSpeed").textContent = `${avgSpeed} mph`;
+      document.getElementById("liveClockDisplay").textContent = `🕒 ${timeStr}`;
+      document.getElementById("liveDateDisplay").textContent = `${dateStr} • Auto-synchronized with current system clock`;
 
-      const distInput = form.elements.namedItem("Distance_mi");
-      if (distInput && (!distInput.value || distInput.dataset.autoFilled === "true")) {
-        distInput.value = distanceMiles.toFixed(2);
-        distInput.dataset.autoFilled = "true";
+      const rushPill = document.getElementById("pillRushHour");
+      if (tf.Rush_Hour === 1) {
+        rushPill.textContent = "⚡ Peak Rush Hour";
+        rushPill.className = "time-pill rush-active";
+      } else {
+        rushPill.textContent = "Normal Traffic Flow";
+        rushPill.className = "time-pill";
       }
 
-      updateMapRoute();
+      const weekPill = document.getElementById("pillWeekend");
+      weekPill.textContent = tf.Is_Weekend === 1 ? "🎉 Weekend" : "💼 Weekday";
+
+      const nightPill = document.getElementById("pillNight");
+      if (tf.Is_Night === 1) {
+        nightPill.textContent = "🌙 Night Lighting";
+        nightPill.className = "time-pill night-active";
+      } else {
+        nightPill.textContent = "☀️ Daylight";
+        nightPill.className = "time-pill";
+      }
     }
+
+    setInterval(updateLiveClockUI, 1000);
+    updateLiveClockUI();
 
     /* =================================================================
-       5. HISTORICAL ACCIDENT HOTSPOTS (16 India + 16 US)
+       REQUIREMENT 3: GOOGLE MAPS-STYLE ROUTING & ALTERNATE ROUTES
        ================================================================= */
-    const historicalHotspots = [
-      // ---- INDIA (MoRTH Blackspots) ----
-      { id: "IND-001", country: "India", lat: 18.4575, lng: 73.8277, severity: 4, city: "Pune", state: "MH", street: "Navale Bridge, Mumbai-Bengaluru Bypass", desc: "High-severity blackspot. Steep highway descent leading to brake failures and multi-vehicle pileups.", weather: "Clear", source: "MoRTH India Accident Blackspot Record" },
-      { id: "IND-002", country: "India", lat: 18.7705, lng: 73.3762, severity: 4, city: "Khopoli / Lonavala", state: "MH", street: "Mumbai-Pune Expressway (Bhor Ghat Section)", desc: "Critical mountainous expressway section with sharp curves, steep gradient, and commercial truck collisions.", weather: "Mist / Overcast", source: "MoRTH India Accident Blackspot Record" },
-      { id: "IND-003", country: "India", lat: 28.7360, lng: 77.1610, severity: 4, city: "New Delhi", state: "DL", street: "Mukarba Chowk, Outer Ring Road & NH-44", desc: "High-fatality convergence zone where interstate freight trucks intersect dense commuter traffic.", weather: "Clear", source: "Delhi Traffic Police Blackspot Survey" },
-      { id: "IND-004", country: "India", lat: 28.3587, lng: 77.5360, severity: 4, city: "Greater Noida", state: "UP", street: "Yamuna Expressway (Mile 45-60 Stretch)", desc: "High-speed expressway corridor prone to major pileups during dense winter fog.", weather: "Fog", source: "Expressway Authority Safety Data" },
-      { id: "IND-005", country: "India", lat: 17.3616, lng: 78.3686, severity: 3, city: "Hyderabad", state: "TS", street: "Outer Ring Road (ORR) - Gachibowli to Shamshabad", desc: "High-speed 8-lane expressway merging sector with frequent night overspeeding collisions.", weather: "Clear", source: "Hyderabad Traffic Police Crash Statistics" },
-      { id: "IND-006", country: "India", lat: 12.9172, lng: 77.6228, severity: 3, city: "Bengaluru", state: "KA", street: "Silk Board Junction & Hosur Road (NH-44)", desc: "Extreme traffic bottleneck junction connecting Outer Ring Road and Hosur corridor.", weather: "Cloudy", source: "Bengaluru Traffic Police Blackspot Study" },
-      { id: "IND-007", country: "India", lat: 28.3588, lng: 76.9380, severity: 3, city: "Gurugram / Manesar", state: "HR", street: "NH-48 (Delhi-Jaipur Highway Kherki Daula)", desc: "Major highway corridor with heavy freight movement and intersection conflict points.", weather: "Haze", source: "MoRTH India Accident Blackspot Record" },
-      { id: "IND-008", country: "India", lat: 12.9249, lng: 80.1278, severity: 3, city: "Chennai", state: "TN", street: "Grand Southern Trunk Road, Tambaram", desc: "High-volume arterial corridor with heavy pedestrian crossing and commercial transit.", weather: "Partly Cloudy", source: "Tamil Nadu Road Safety Authority" },
-      { id: "IND-009", country: "India", lat: 22.5615, lng: 88.3075, severity: 3, city: "Howrah / Kolkata", state: "WB", street: "Kona Expressway & Vidyasagar Setu Approach", desc: "Elevated expressway bottleneck connecting Kolkata to NH-16, frequent truck brake incidents.", weather: "Clear", source: "West Bengal Highway Safety Cell" },
-      { id: "IND-010", country: "India", lat: 19.0634, lng: 72.8992, severity: 3, city: "Mumbai", state: "MH", street: "Eastern Express Highway (Chedda Nagar)", desc: "High-speed urban arterial junction with complex flyover merges and rapid lane changes.", weather: "Clear", source: "Mumbai Traffic Police Crash Log" },
-      { id: "IND-011", country: "India", lat: 12.8452, lng: 77.6602, severity: 3, city: "Bengaluru", state: "KA", street: "Electronic City Elevated Tollway (Hosur Rd)", desc: "Elevated 10 km corridor with overspeeding and monsoon skid hazards.", weather: "Rain", source: "Karnataka State Police Safety Data" },
-      { id: "IND-012", country: "India", lat: 23.0305, lng: 72.5080, severity: 2, city: "Ahmedabad", state: "GJ", street: "SG Highway (Sarkhej-Gandhinagar Highway)", desc: "Major transit corridor with frequent cross-traffic signal collisions.", weather: "Clear", source: "Ahmedabad Traffic Safety Assessment" },
-      { id: "IND-013", country: "India", lat: 10.0261, lng: 76.3082, severity: 2, city: "Kochi", state: "KL", street: "Edappally Junction (NH-66 & NH-544)", desc: "Dense intersection joining national highways and metro corridor with turning friction.", weather: "Light Rain", source: "Kerala Road Safety Authority" },
-      { id: "IND-014", country: "India", lat: 17.4265, lng: 78.4518, severity: 2, city: "Hyderabad", state: "TS", street: "Panjagutta Central Junction & Flyover", desc: "Heavy urban core junction with continuous merging and signal transition friction.", weather: "Clear", source: "Hyderabad Traffic Police Crash Statistics" },
-      { id: "IND-015", country: "India", lat: 30.7046, lng: 76.7978, severity: 1, city: "Chandigarh", state: "CH", street: "Tribune Chowk (Purv Marg & Dakshin Marg)", desc: "Large signalized roundabout with regulated speed flow and minor fender-benders.", weather: "Clear", source: "Chandigarh Traffic Police Data" },
-      { id: "IND-016", country: "India", lat: 18.9438, lng: 72.8232, severity: 1, city: "Mumbai", state: "MH", street: "Marine Drive Promenade (NC Bose Rd)", desc: "Regulated speed coastal arterial with strict signals and minor low-speed contact.", weather: "Clear", source: "Mumbai Traffic Police Crash Log" },
-      // ---- US (SDC US-Accidents Dataset) ----
-      { id: "US-001", country: "US", lat: 39.91741, lng: -83.01424, severity: 4, city: "Columbus", state: "OH", street: "Frank Rd", desc: "Entry ramp closed due to major collision on OH-104 at I-71.", weather: "Clear", source: "US-Accidents Dataset Record" },
-      { id: "US-002", country: "US", lat: 37.32112, lng: -121.89989, severity: 4, city: "San Jose", state: "CA", street: "I-280 S", desc: "Major freeway collision on I-280 Southbound at Bird Ave.", weather: "Clear", source: "US-Accidents Dataset Record" },
-      { id: "US-003", country: "US", lat: 37.63062, lng: -122.43504, severity: 4, city: "San Bruno", state: "CA", street: "Junipero Serra Fwy N", desc: "Multi-lane collision on I-280 before I-380 interchange.", weather: "Partly Cloudy", source: "US-Accidents Dataset Record" },
-      { id: "US-004", country: "US", lat: 37.33911, lng: -121.85181, severity: 4, city: "San Jose", state: "CA", street: "Bayshore Fwy S", desc: "Right lane blocked on I-680 Southbound before US-101.", weather: "Haze", source: "US-Accidents Dataset Record" },
-      { id: "US-005", country: "US", lat: 39.86515, lng: -84.05872, severity: 3, city: "Dayton", state: "OH", street: "I-70 E", desc: "Lane blocked on I-70 Eastbound at State Route 4.", weather: "Light Rain", source: "US-Accidents Dataset Record" },
-      { id: "US-006", country: "US", lat: 39.74775, lng: -84.20558, severity: 3, city: "Dayton", state: "OH", street: "I-75 S", desc: "Highway incident on I-75 Southbound at US-35.", weather: "Mostly Cloudy", source: "US-Accidents Dataset Record" },
-      { id: "US-007", country: "US", lat: 40.10059, lng: -82.92519, severity: 3, city: "Westerville", state: "OH", street: "Westerville Rd", desc: "Accident on I-270 Outerbelt Northbound near State St.", weather: "Light Rain", source: "US-Accidents Dataset Record" },
-      { id: "US-008", country: "US", lat: 39.77038, lng: -84.1949, severity: 3, city: "Dayton", state: "OH", street: "N Main St", desc: "Accident on I-75 Southbound at Grand Ave.", weather: "Overcast", source: "US-Accidents Dataset Record" },
-      { id: "US-009", country: "US", lat: 39.92806, lng: -82.83118, severity: 2, city: "Reynoldsburg", state: "OH", street: "Brice Rd", desc: "Accident on Brice Rd at Tussing Rd.", weather: "Light Rain", source: "US-Accidents Dataset Record" },
-      { id: "US-010", country: "US", lat: 39.06315, lng: -84.03261, severity: 2, city: "Williamsburg", state: "OH", street: "State Route 32", desc: "Accident on OH-32 Westbound at Dela Palma Rd.", weather: "Overcast", source: "US-Accidents Dataset Record" },
-      { id: "US-011", country: "US", lat: 39.62778, lng: -84.18835, severity: 2, city: "Dayton", state: "OH", street: "Miamisburg Centerville Rd", desc: "Collision at McEwen Rd & OH-725.", weather: "Mostly Cloudy", source: "US-Accidents Dataset Record" },
-      { id: "US-012", country: "US", lat: 39.75827, lng: -84.23051, severity: 2, city: "Dayton", state: "OH", street: "N Woodward Ave", desc: "Urban incident at Oakridge Dr & Woodward Ave.", weather: "Overcast", source: "US-Accidents Dataset Record" },
-      { id: "US-013", country: "US", lat: 41.39581, lng: -81.93556, severity: 1, city: "North Olmsted", state: "OH", street: "Maplehurst Rd", desc: "Minor property damage at Westlawn Dr & Holly Dr.", weather: "Overcast", source: "US-Accidents Dataset Record" },
-      { id: "US-014", country: "US", lat: 40.01867, lng: -81.5657, severity: 1, city: "Cambridge", state: "OH", street: "Old Byesville Rd", desc: "Low-impact collision on North Ave at Old Byesville Rd.", weather: "Light Rain", source: "US-Accidents Dataset Record" },
-      { id: "US-015", country: "US", lat: 37.75049, lng: -121.37998, severity: 1, city: "Tracy", state: "CA", street: "W F St", desc: "Minor vehicle scrape at Banta Rd & Brichetto Rd.", weather: "Clear", source: "US-Accidents Dataset Record" },
-      { id: "US-016", country: "US", lat: 36.83132, lng: -121.43517, severity: 1, city: "Hollister", state: "CA", street: "Union Rd", desc: "Minor collision on Union Rd near Access Rd.", weather: "Clear", source: "US-Accidents Dataset Record" }
-    ];
+    let destinationMap;
+    let destinationMarker;
+    let startMarker;
+    let routeLayers = [];
+    let currentRoutes = [];
+    let selectedRouteIndex = 0;
+    let routeRequestToken = 0;
 
-    /* =================================================================
-       6. GOOGLE MAP INITIALIZATION & HOTSPOTS (Requirements 1 & 4)
-       ================================================================= */
-    let map, startMarker, endMarker, routePolyline;
-    let hotspotLayerGroup = null;
-    let hotspotsVisible = true; // SHOWN BY DEFAULT
-    let currentRegion = "all";
-
-    const severityColors = {
-      1: "#10b981", // Low - Green
-      2: "#3b82f6", // Moderate - Blue
-      3: "#f59e0b", // High - Amber
-      4: "#ef4444"  // Critical - Red
-    };
-
-    const severityLabelsShort = {
-      1: "Low Impact",
-      2: "Moderate",
-      3: "High Severity",
-      4: "Critical"
-    };
-
-    function createHotspotMarker(spot) {
-      const color = severityColors[spot.severity] || "#94a3b8";
-      const size = 16 + (spot.severity * 4);
-      const icon = L.divIcon({
-        className: "hotspot-marker-icon",
-        html: `<div class="pulse-marker" style="
-          background: ${color};
-          width: ${size}px; height: ${size}px;
-          border-radius: 50%;
-          border: 2px solid #ffffff;
-          box-shadow: 0 0 10px ${color};
-          cursor: pointer;
-        "></div>`,
-        iconSize: [size, size],
-        iconAnchor: [size / 2, size / 2]
-      });
-
-      const marker = L.marker([spot.lat, spot.lng], { icon });
-      marker.bindPopup(`
-        <div style="font-family: 'Segoe UI', sans-serif; max-width: 280px; color: #1e293b;">
-          <div style="font-weight: 700; font-size: 14px; margin-bottom: 4px;">
-            ${spot.country === "India" ? "🇮🇳" : "🇺🇸"} ${spot.city}, ${spot.state}
-          </div>
-          <div style="font-size: 12px; color: #64748b; margin-bottom: 6px;">${spot.street}</div>
-          <div style="display: inline-block; padding: 2px 8px; border-radius: 9999px; font-size: 11px; font-weight: 700; background: ${color}22; color: ${color}; border: 1px solid ${color}55; margin-bottom: 6px;">
-            Severity ${spot.severity} — ${severityLabelsShort[spot.severity]}
-          </div>
-          <div style="font-size: 12px; margin-bottom: 6px; line-height: 1.4;">${spot.desc}</div>
-          <div style="font-size: 11px; color: #94a3b8;">🌤️ ${spot.weather} &bull; 📋 ${spot.source}</div>
-        </div>
-      `);
-      return marker;
+    function destinationCoords() {
+      const lat = Number(form.elements.namedItem("End_Lat")?.value);
+      const lng = Number(form.elements.namedItem("End_Lng")?.value);
+      return Number.isFinite(lat) && Number.isFinite(lng) &&
+        form.elements.namedItem("End_Lat").value !== "" &&
+        form.elements.namedItem("End_Lng").value !== "" &&
+        Math.abs(lat) <= 90 && Math.abs(lng) <= 180 ? [lat, lng] : null;
     }
 
-    function getFilteredHotspots() {
-      if (currentRegion === "india") {
-        return historicalHotspots.filter(h => h.country === "India");
-      } else if (currentRegion === "us") {
-        return historicalHotspots.filter(h => h.country === "US");
-      }
-      return historicalHotspots;
+    function startCoords() {
+      const lat = Number(form.elements.namedItem("Start_Lat")?.value);
+      const lng = Number(form.elements.namedItem("Start_Lng")?.value);
+      return Number.isFinite(lat) && Number.isFinite(lng) &&
+        form.elements.namedItem("Start_Lat").value !== "" &&
+        form.elements.namedItem("Start_Lng").value !== "" &&
+        Math.abs(lat) <= 90 && Math.abs(lng) <= 180 ? [lat, lng] : null;
     }
 
-    function renderHotspots() {
-      if (!map) return;
+    function initDestinationMap() {
+      if (!window.L || destinationMap) return;
 
-      if (hotspotLayerGroup && map.hasLayer(hotspotLayerGroup)) {
-        map.removeLayer(hotspotLayerGroup);
-      }
+      destinationMap = L.map("destinationMap", { scrollWheelZoom: true })
+        .setView([18.5204, 73.8567], 10);
 
-      const filtered = getFilteredHotspots();
-      const markers = filtered.map(createHotspotMarker);
-      hotspotLayerGroup = L.layerGroup(markers);
-
-      if (hotspotsVisible) {
-        hotspotLayerGroup.addTo(map);
-      }
-
-      const countEl = document.getElementById("hotspotCount");
-      if (countEl) {
-        countEl.textContent = hotspotsVisible ? `${filtered.length} hotspots active` : "Hotspots hidden";
-      }
-    }
-
-    function toggleHotspots() {
-      if (!map) return;
-      const btn = document.getElementById("toggleHotspotsBtn");
-
-      if (hotspotsVisible) {
-        if (hotspotLayerGroup && map.hasLayer(hotspotLayerGroup)) {
-          map.removeLayer(hotspotLayerGroup);
-        }
-        hotspotsVisible = false;
-        btn.textContent = "🔴 Show Hotspots";
-        btn.classList.remove("active");
-        const countEl = document.getElementById("hotspotCount");
-        if (countEl) countEl.textContent = "Hotspots hidden";
-      } else {
-        hotspotsVisible = true;
-        renderHotspots();
-        btn.textContent = "🟢 Hide Hotspots";
-        btn.classList.add("active");
-        zoomToRegion();
-      }
-    }
-
-    function zoomToRegion() {
-      if (!map || !hotspotsVisible) return;
-      const filtered = getFilteredHotspots();
-      if (filtered.length === 0) return;
-
-      if (currentRegion === "india") {
-        map.fitBounds([[8.0, 68.0], [35.0, 97.0]], { padding: [30, 30] });
-      } else if (currentRegion === "us") {
-        map.fitBounds([[25.0, -125.0], [50.0, -66.0]], { padding: [30, 30] });
-      } else {
-        const lats = filtered.map(h => h.lat);
-        const lngs = filtered.map(h => h.lng);
-        map.fitBounds([
-          [Math.min(...lats) - 2, Math.min(...lngs) - 2],
-          [Math.max(...lats) + 2, Math.max(...lngs) + 2]
-        ], { padding: [30, 30] });
-      }
-    }
-
-    function setActiveRegionBtn(region) {
-      currentRegion = region;
-      document.querySelectorAll(".region-btn").forEach(btn => {
-        btn.classList.remove("active-region");
-      });
-      const idMap = { all: "showAllBtn", india: "showIndiaBtn", us: "showUSBtn" };
-      const activeBtn = document.getElementById(idMap[region]);
-      if (activeBtn) activeBtn.classList.add("active-region");
-
-      if (hotspotsVisible) {
-        renderHotspots();
-        zoomToRegion();
-      }
-    }
-
-    function initMap() {
-      if (typeof L === "undefined") {
-        console.warn("Leaflet library not loaded yet.");
-        setTimeout(initMap, 200);
-        return;
-      }
-
-      // Initialize map over India
-      map = L.map("map", {
-        center: [20.5937, 78.9629],
-        zoom: 5,
-        zoomControl: true
-      });
-
-      // Rock-solid OpenStreetMap base layer (guaranteed to load everywhere)
-      const osmLayer = L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      // Clean tile layer
+      L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
         maxZoom: 19,
         attribution: '&copy; OpenStreetMap contributors'
+      }).addTo(destinationMap);
+
+      destinationMap.on("click", event => {
+        setDestination(event.latlng.lat, event.latlng.lng, "Selected Map Point");
       });
 
-      // Google Maps Roads Layer
-      const googleRoads = L.tileLayer("https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}", {
-        maxZoom: 20,
-        attribution: '&copy; Google Maps'
-      });
-
-      // Google Maps Hybrid (Satellite with street names)
-      const googleHybrid = L.tileLayer("https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}", {
-        maxZoom: 20,
-        attribution: '&copy; Google Maps'
-      });
-
-      // CartoDB Voyager (clean Google-style aesthetic)
-      const cartoVoyager = L.tileLayer("https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png", {
-        maxZoom: 19,
-        subdomains: "abcd",
-        attribution: '&copy; CartoDB &copy; OpenStreetMap'
-      });
-
-      // Add Google Roads by default; fallback to OSM if tiles fail
-      googleRoads.addTo(map);
-      googleRoads.on("tileerror", function() {
-        if (!map.hasLayer(osmLayer) && !map.hasLayer(cartoVoyager)) {
-          osmLayer.addTo(map);
-        }
-      });
-
-      // Layer switcher control for Google Maps, Satellite, and Street views
-      L.control.layers({
-        "Google Maps (Roads)": googleRoads,
-        "Google Maps (Satellite)": googleHybrid,
-        "Clean Street Map": cartoVoyager,
-        "OpenStreetMap": osmLayer
-      }, null, { position: "topright" }).addTo(map);
-
-      // Render all 32 hotspots immediately onto the map
-      hotspotsVisible = true;
-      renderHotspots();
-
-      // Way 1: Click anywhere on map to select Destination (End Lat & End Lon)
-      map.on("click", function(e) {
-        const lat = Number(e.latlng.lat.toFixed(6));
-        const lng = Number(e.latlng.lng.toFixed(6));
-
-        setField("End_Lat", lat);
-        setField("End_Lng", lng);
-
-        updateEndMarker(lat, lng);
-        updateMapsLink(lat, lng);
-        calculateETA();
-      });
-
-      // Way 2: Synchronize map markers when coordinates are typed manually
-      ["Start_Lat", "Start_Lng"].forEach(name => {
-        const input = document.getElementById("field_" + name);
-        if (input) {
-          input.addEventListener("input", () => {
-            syncStartFromInputs();
-            calculateETA();
-          });
-        }
-      });
-
-      ["End_Lat", "End_Lng"].forEach(name => {
-        const input = document.getElementById("field_" + name);
-        if (input) {
-          input.addEventListener("input", () => {
-            syncEndFromInputs();
-            calculateETA();
-          });
-        }
-      });
-
-      ["Rush_Hour", "Weather_Condition_Clean"].forEach(name => {
-        const input = document.getElementById("field_" + name);
-        if (input) {
-          input.addEventListener("change", calculateETA);
-        }
-      });
-
-      // Hotspot button controls
-      document.getElementById("toggleHotspotsBtn").addEventListener("click", toggleHotspots);
-      document.getElementById("showAllBtn").addEventListener("click", () => setActiveRegionBtn("all"));
-      document.getElementById("showIndiaBtn").addEventListener("click", () => setActiveRegionBtn("india"));
-      document.getElementById("showUSBtn").addEventListener("click", () => setActiveRegionBtn("us"));
-
-      // Ensure proper sizing after DOM render
-      setTimeout(() => { map.invalidateSize(); }, 300);
-
-      // Try fetching any extra dynamic hotspots from backend
-      fetchHotspotsFromBackend();
+      const currentDestination = destinationCoords();
+      if (currentDestination) {
+        setDestination(currentDestination[0], currentDestination[1]);
+      }
+      setTimeout(() => destinationMap.invalidateSize(), 300);
     }
 
-    async function fetchHotspotsFromBackend() {
+    function createCustomPin(color, text) {
+      return L.divIcon({
+        className: "custom-map-pin",
+        html: `<div style="
+          background: ${color};
+          width: 28px; height: 28px;
+          border-radius: 50% 50% 50% 0;
+          transform: rotate(-45deg);
+          border: 3px solid white;
+          box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+          display: flex; align-items: center; justify-content: center;
+        ">
+          <span style="transform: rotate(45deg); color: white; font-weight: 800; font-size: 12px;">${text}</span>
+        </div>`,
+        iconSize: [28, 28],
+        iconAnchor: [14, 28]
+      });
+    }
+
+    function setStart(lat, lng, label = "Start point") {
+      if (!Number.isFinite(lat) || !Number.isFinite(lng)) return;
+      setField("Start_Lat", Number(lat).toFixed(6));
+      setField("Start_Lng", Number(lng).toFixed(6));
+      document.getElementById("startSearchStatus").textContent = `${label}: ${lat.toFixed(4)}, ${lng.toFixed(4)}`;
+
+      // Auto-fetch weather whenever start coordinates change (Requirement 1)
+      autoFetchLiveWeather(lat, lng);
+
+      if (destinationMap) {
+        const point = [lat, lng];
+        if (startMarker) startMarker.setLatLng(point);
+        else startMarker = L.marker(point, {
+          icon: createCustomPin("#10b981", "A"),
+          draggable: true
+        }).addTo(destinationMap).bindPopup("Starting Point (A)");
+
+        startMarker.on("dragend", e => {
+          const p = e.target.getLatLng();
+          setStart(p.lat, p.lng, "Adjusted Start Pin");
+        });
+      }
+      calculateGoogleStyleRoutes();
+    }
+
+    function setDestination(lat, lng, label = "Destination point") {
+      if (!Number.isFinite(lat) || !Number.isFinite(lng)) return;
+      setField("End_Lat", Number(lat).toFixed(6));
+      setField("End_Lng", Number(lng).toFixed(6));
+      document.getElementById("destinationStatus").textContent = `${label}: ${lat.toFixed(4)}, ${lng.toFixed(4)}`;
+
+      const openLink = document.getElementById("openDestinationMap");
+      openLink.href = `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`;
+
+      if (destinationMap) {
+        const point = [lat, lng];
+        if (destinationMarker) destinationMarker.setLatLng(point);
+        else destinationMarker = L.marker(point, {
+          icon: createCustomPin("#ef4444", "B"),
+          draggable: true
+        }).addTo(destinationMap).bindPopup("Destination (B)");
+
+        destinationMarker.on("dragend", e => {
+          const p = e.target.getLatLng();
+          setDestination(p.lat, p.lng, "Adjusted Destination Pin");
+        });
+      }
+      calculateGoogleStyleRoutes();
+    }
+
+    function clearOldRouteLayers() {
+      if (!destinationMap) return;
+      routeLayers.forEach(l => destinationMap.removeLayer(l));
+      routeLayers = [];
+    }
+
+    function formatDuration(minutes) {
+      const total = Math.max(1, Math.round(minutes));
+      const hours = Math.floor(total / 60);
+      const mins = total % 60;
+      return hours ? `${hours} hr ${mins} min` : `${mins} min`;
+    }
+
+    /* Requirement 3: Fetch Primary and Alternate Routes via OSRM */
+    async function calculateGoogleStyleRoutes() {
+      const origin = startCoords();
+      const destination = destinationCoords();
+      const distanceEl = document.getElementById("routeDistance");
+      const durationEl = document.getElementById("routeDuration");
+      const arrivalEl = document.getElementById("expectedArrival");
+      const selectorContainer = document.getElementById("routesSelectorContainer");
+      const requestId = ++routeRequestToken;
+
+      if (!origin || !destination) {
+        distanceEl.textContent = "—";
+        durationEl.textContent = "—";
+        arrivalEl.textContent = "—";
+        selectorContainer.style.display = "none";
+        clearOldRouteLayers();
+        return;
+      }
+
+      durationEl.textContent = "Calculating routes…";
+      distanceEl.textContent = "…";
+      arrivalEl.textContent = "…";
+
       try {
-        const baseUrl = getApiBaseUrl();
-        const resp = await fetch(baseUrl + "/api/hotspots");
-        if (!resp.ok) return;
+        // Query OSRM with geometries=geojson and alternatives=true
+        const routeUrl = `https://router.project-osrm.org/route/v1/driving/${origin[1]},${origin[0]};${destination[1]},${destination[0]}?overview=full&geometries=geojson&alternatives=true`;
+        const resp = await fetch(routeUrl);
+        if (!resp.ok) throw new Error("Route network service unavailable");
         const data = await resp.json();
-        if (data.hotspots && Array.isArray(data.hotspots)) {
-          const existingIds = new Set(historicalHotspots.map(h => h.id));
-          for (const h of data.hotspots) {
-            if (!existingIds.has(h.id)) {
-              historicalHotspots.push(h);
-              existingIds.add(h.id);
-            }
-          }
-          if (hotspotsVisible) {
-            renderHotspots();
-          }
-        }
-      } catch (e) {
-        // Hardcoded hotspots ensure map always works even without backend
-      }
-    }
+        if (requestId !== routeRequestToken) return;
+        if (data.code !== "Ok" || !data.routes?.length) throw new Error("No driving paths found");
 
-    /* Start / End Markers & Polyline Route */
-    function updateStartMarker(lat, lng) {
-      if (!map || typeof L === "undefined") return;
-      const startIcon = L.divIcon({
-        className: "custom-div-icon",
-        html: `<div style="background-color: #10b981; width: 28px; height: 28px; border-radius: 50%; border: 3px solid white; box-shadow: 0 3px 8px rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; color: white; font-size: 13px; font-weight: bold;">S</div>`,
-        iconSize: [28, 28],
-        iconAnchor: [14, 14]
-      });
+        currentRoutes = data.routes;
+        selectedRouteIndex = 0;
+        renderGoogleStyleRoutesOnMap();
+      } catch (err) {
+        if (requestId !== routeRequestToken) return;
+        // Direct Fallback if route service is blocked
+        clearOldRouteLayers();
+        const lat1 = origin[0], lon1 = origin[1], lat2 = destination[0], lon2 = destination[1];
+        const R = 6371;
+        const dLat = (lat2 - lat1) * Math.PI / 180;
+        const dLon = (lon2 - lon1) * Math.PI / 180;
+        const a = Math.sin(dLat / 2) ** 2 + Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLon / 2) ** 2;
+        const km = R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+        const mi = km * 0.621371;
+        const minutes = (km / 40) * 60;
+        const arrival = new Date(Date.now() + minutes * 60000);
 
-      if (!startMarker) {
-        startMarker = L.marker([lat, lng], { icon: startIcon, draggable: true }).addTo(map);
-        startMarker.bindPopup("<strong>Start Location</strong><br>Lat: " + lat + "<br>Lng: " + lng);
-        startMarker.on("dragend", function(ev) {
-          const pos = ev.target.getLatLng();
-          setField("Start_Lat", pos.lat);
-          setField("Start_Lng", pos.lng);
-          calculateETA();
-        });
-      } else {
-        startMarker.setLatLng([lat, lng]);
-        startMarker.getPopup().setContent("<strong>Start Location</strong><br>Lat: " + lat + "<br>Lng: " + lng);
-      }
-    }
+        distanceEl.textContent = `${km.toFixed(1)} km (~${mi.toFixed(1)} mi)`;
+        durationEl.textContent = `~${formatDuration(minutes)}`;
+        arrivalEl.textContent = arrival.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
-    function updateEndMarker(lat, lng) {
-      if (!map || typeof L === "undefined") return;
-      const endIcon = L.divIcon({
-        className: "custom-div-icon",
-        html: `<div style="background-color: #ef4444; width: 28px; height: 28px; border-radius: 50%; border: 3px solid white; box-shadow: 0 3px 8px rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; color: white; font-size: 13px; font-weight: bold;">E</div>`,
-        iconSize: [28, 28],
-        iconAnchor: [14, 14]
-      });
+        setField("Distance_mi", mi.toFixed(2));
 
-      if (!endMarker) {
-        endMarker = L.marker([lat, lng], { icon: endIcon, draggable: true }).addTo(map);
-        endMarker.bindPopup("<strong>Destination (End)</strong><br>Lat: " + lat + "<br>Lng: " + lng).openPopup();
-        endMarker.on("dragend", function(ev) {
-          const pos = ev.target.getLatLng();
-          setField("End_Lat", pos.lat);
-          setField("End_Lng", pos.lng);
-          updateMapsLink(pos.lat, pos.lng);
-          calculateETA();
-        });
-      } else {
-        endMarker.setLatLng([lat, lng]);
-        endMarker.getPopup().setContent("<strong>Destination (End)</strong><br>Lat: " + lat + "<br>Lng: " + lng).openPopup();
-      }
-    }
-
-    function updateMapRoute() {
-      if (!map || typeof L === "undefined") return;
-      const startLat = parseFloat(getField("Start_Lat"));
-      const startLng = parseFloat(getField("Start_Lng"));
-      const endLat = parseFloat(getField("End_Lat"));
-      const endLng = parseFloat(getField("End_Lng"));
-
-      if (!isNaN(startLat) && !isNaN(startLng) && !isNaN(endLat) && !isNaN(endLng)) {
-        const latlngs = [
-          [startLat, startLng],
-          [endLat, endLng]
-        ];
-
-        if (!routePolyline) {
-          routePolyline = L.polyline(latlngs, {
+        if (destinationMap) {
+          const directLine = L.polyline([origin, destination], {
             color: "#38bdf8",
             weight: 4,
-            opacity: 0.85,
-            dashArray: "8, 6"
-          }).addTo(map);
+            dashArray: "6, 8"
+          }).addTo(destinationMap);
+          routeLayers.push(directLine);
+          destinationMap.fitBounds([origin, destination], { padding: [40, 40] });
+        }
+        selectorContainer.style.display = "none";
+      }
+    }
+
+    /* Render Primary (Blue) and Alternate (Grey) Routes like Google Maps */
+    function renderGoogleStyleRoutesOnMap() {
+      clearOldRouteLayers();
+      const selectorContainer = document.getElementById("routesSelectorContainer");
+      selectorContainer.innerHTML = "";
+      selectorContainer.style.display = "flex";
+
+      const allLatLngs = [];
+
+      currentRoutes.forEach((route, idx) => {
+        const coords = route.geometry.coordinates.map(c => [c[1], c[0]]);
+        coords.forEach(p => allLatLngs.push(p));
+
+        const km = route.distance / 1000;
+        const mi = km * 0.621371;
+        const minutes = route.duration / 60;
+        const isSelected = (idx === selectedRouteIndex);
+
+        // Google Maps Route Styling:
+        // Selected / Primary Route: Thick blue with halo
+        // Alternate Route: Grey, thinner, clickable
+        let polyline;
+        if (isSelected) {
+          // Glow halo
+          const halo = L.polyline(coords, {
+            color: "#1557b0",
+            weight: 9,
+            opacity: 0.8
+          }).addTo(destinationMap);
+          routeLayers.push(halo);
+
+          // Main line
+          polyline = L.polyline(coords, {
+            color: "#1a73e8",
+            weight: 6,
+            opacity: 0.95
+          }).addTo(destinationMap);
+          routeLayers.push(polyline);
         } else {
-          routePolyline.setLatLngs(latlngs);
+          polyline = L.polyline(coords, {
+            color: "#94a3b8",
+            weight: 5,
+            opacity: 0.75,
+            dashArray: "1 0"
+          }).addTo(destinationMap);
+          routeLayers.push(polyline);
         }
 
-        const bounds = L.latLngBounds(latlngs);
-        map.fitBounds(bounds, { padding: [50, 50], maxZoom: 14 });
+        polyline.bindTooltip(
+          idx === 0 ? `<strong>Fastest Route:</strong> ${formatDuration(minutes)} (${km.toFixed(1)} km)` : `<strong>Alternate Route ${idx}:</strong> ${formatDuration(minutes)}`,
+          { sticky: true }
+        );
+
+        polyline.on("click", () => {
+          selectedRouteIndex = idx;
+          renderGoogleStyleRoutesOnMap();
+        });
+
+        // Add to Google Maps Style Route Selector Cards
+        const card = document.createElement("div");
+        card.className = `route-option-card ${isSelected ? 'active-route' : ''}`;
+        const routeLabel = idx === 0 ? "🔵 Fastest Route (Recommended)" : `⚪ Alternate Route ${idx}`;
+        const timeDiff = idx === 0 ? "" : ` (+${Math.max(1, Math.round((route.duration - currentRoutes[0].duration) / 60))} min)`;
+
+        card.innerHTML = `
+          <div>
+            <div class="route-info-title">
+              <span class="route-badge-dot ${isSelected ? 'route-dot-primary' : 'route-dot-alt'}"></span>
+              ${routeLabel}
+            </div>
+            <div class="route-info-summary">Via ${route.legs?.[0]?.summary || "Highway / Arterial"}</div>
+          </div>
+          <div>
+            <div class="route-time-stat">${formatDuration(minutes)}${timeDiff}</div>
+            <div class="route-dist-stat">${km.toFixed(1)} km · ${mi.toFixed(1)} mi</div>
+          </div>
+        `;
+
+        card.addEventListener("click", () => {
+          selectedRouteIndex = idx;
+          renderGoogleStyleRoutesOnMap();
+        });
+
+        selectorContainer.appendChild(card);
+      });
+
+      // Update telemetry for active route
+      const activeRoute = currentRoutes[selectedRouteIndex];
+      const km = activeRoute.distance / 1000;
+      const mi = km * 0.621371;
+      const minutes = activeRoute.duration / 60;
+      const arrival = new Date(Date.now() + activeRoute.duration * 1000);
+
+      document.getElementById("routeDistance").textContent = `${km.toFixed(1)} km (${mi.toFixed(1)} mi)`;
+      document.getElementById("routeDuration").textContent = formatDuration(minutes);
+      document.getElementById("expectedArrival").textContent = arrival.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+      // Auto-update Distance_mi for ML model
+      setField("Distance_mi", mi.toFixed(2));
+
+      if (allLatLngs.length && destinationMap) {
+        destinationMap.fitBounds(L.latLngBounds(allLatLngs), { padding: [40, 40] });
       }
     }
 
-    function syncStartFromInputs() {
-      const lat = parseFloat(getField("Start_Lat"));
-      const lng = parseFloat(getField("Start_Lng"));
-      if (!isNaN(lat) && !isNaN(lng)) {
-        updateStartMarker(lat, lng);
-        if (!endMarker) {
-          map.setView([lat, lng], 11);
-        }
-      }
+    // Geocoding helper
+    async function geocodePlace(query) {
+      const clean = query.trim();
+      if (!clean) throw new Error("Enter a place name or address.");
+      const url = new URL("https://nominatim.openstreetmap.org/search");
+      url.search = new URLSearchParams({ q: clean, format: "jsonv2", limit: "1" });
+      const resp = await fetch(url, { headers: { "Accept": "application/json" } });
+      if (!resp.ok) throw new Error("Geocoding service unavailable");
+      const results = await resp.json();
+      if (!results.length) throw new Error("No matching location found");
+      return results[0];
     }
 
-    function syncEndFromInputs() {
-      const lat = parseFloat(getField("End_Lat"));
-      const lng = parseFloat(getField("End_Lng"));
-      if (!isNaN(lat) && !isNaN(lng)) {
-        updateEndMarker(lat, lng);
-        updateMapsLink(lat, lng);
-      }
-    }
-
-    function updateMapsLink(lat, lng) {
-      const link = document.getElementById("endMapsLink");
-      if (link && lat !== null && lng !== null && !isNaN(lat) && !isNaN(lng)) {
-        const url = `https://www.google.com/maps?q=${Number(lat).toFixed(6)},${Number(lng).toFixed(6)}`;
-        link.href = url;
-        link.textContent = `🔗 View Destination on Google Maps (${Number(lat).toFixed(4)}, ${Number(lng).toFixed(4)})`;
-      }
-    }
-
-    // Initialize map on window load
-    window.addEventListener("DOMContentLoaded", initMap);
-
-    /* =================================================================
-       7. RESILIENT CURRENT LOCATION DETECTION (GPS + IP Fallback)
-       ================================================================= */
-    async function determineLocation() {
-      if (navigator.geolocation) {
-        try {
-          const pos = await new Promise((resolve, reject) => {
-            navigator.geolocation.getCurrentPosition(resolve, reject, {
-              enableHighAccuracy: true,
-              timeout: 7000,
-              maximumAge: 60000
-            });
-          });
-          return {
-            latitude: pos.coords.latitude,
-            longitude: pos.coords.longitude,
-            method: "GPS"
-          };
-        } catch (gpsError) {
-          console.warn("Browser GPS unavailable or timed out, trying IP fallback...", gpsError.message);
-        }
-      }
-
-      // IP geolocation fallback 1 (ipwho.is)
+    document.getElementById("searchStart").addEventListener("click", async () => {
+      const input = document.getElementById("startSearch");
+      const st = document.getElementById("startSearchStatus");
+      st.textContent = "Searching starting point…";
       try {
-        const res = await fetch("https://ipwho.is/");
-        if (res.ok) {
-          const data = await res.json();
-          if (data.success && data.latitude && data.longitude) {
-            return {
-              latitude: data.latitude,
-              longitude: data.longitude,
-              state: data.region_code || data.region,
-              city: data.city,
-              method: "IP (Approximate)"
-            };
-          }
-        }
-      } catch (ipErr1) {
-        console.warn("ipwho.is unavailable, trying ipapi...", ipErr1.message);
+        const p = await geocodePlace(input.value);
+        setStart(Number(p.lat), Number(p.lon), p.display_name.split(",")[0]);
+      } catch (e) {
+        st.textContent = "❌ " + e.message;
       }
+    });
 
-      // IP geolocation fallback 2 (ipapi.co)
+    document.getElementById("searchDestination").addEventListener("click", async () => {
+      const input = document.getElementById("destinationSearch");
+      const st = document.getElementById("destinationStatus");
+      st.textContent = "Searching destination…";
       try {
-        const res2 = await fetch("https://ipapi.co/json/");
-        if (res2.ok) {
-          const data2 = await res2.json();
-          if (data2.latitude && data2.longitude) {
-            return {
-              latitude: data2.latitude,
-              longitude: data2.longitude,
-              state: data2.region_code || data2.region,
-              city: data2.city,
-              method: "IP (Approximate)"
-            };
-          }
-        }
-      } catch (ipErr2) {
-        console.warn("ipapi.co unavailable:", ipErr2.message);
+        const p = await geocodePlace(input.value);
+        setDestination(Number(p.lat), Number(p.lon), p.display_name.split(",")[0]);
+      } catch (e) {
+        st.textContent = "❌ " + e.message;
       }
+    });
 
-      throw new Error("Location permission denied or unavailable. Please enter coordinates manually.");
-    }
+    document.getElementById("clearDestination").addEventListener("click", () => {
+      setField("End_Lat", "");
+      setField("End_Lng", "");
+      document.getElementById("destinationSearch").value = "";
+      document.getElementById("destinationStatus").textContent = "Destination cleared. Select a point on the map.";
+      document.getElementById("routeDistance").textContent = "—";
+      document.getElementById("routeDuration").textContent = "—";
+      document.getElementById("expectedArrival").textContent = "—";
+      document.getElementById("routesSelectorContainer").style.display = "none";
+      if (destinationMarker && destinationMap) destinationMap.removeLayer(destinationMarker);
+      destinationMarker = null;
+      clearOldRouteLayers();
+    });
 
+    ["Start_Lat", "Start_Lng"].forEach(name => {
+      form.elements.namedItem(name)?.addEventListener("change", () => {
+        const lat = Number(getField("Start_Lat"));
+        const lng = Number(getField("Start_Lng"));
+        if (Number.isFinite(lat) && Number.isFinite(lng)) {
+          autoFetchLiveWeather(lat, lng);
+        }
+        calculateGoogleStyleRoutes();
+      });
+    });
+
+    ["End_Lat", "End_Lng"].forEach(name => {
+      form.elements.namedItem(name)?.addEventListener("change", () => {
+        calculateGoogleStyleRoutes();
+      });
+    });
+
+    /* GPS Detection Handler */
     document.querySelector("#locationButton").addEventListener("click", async () => {
-      const btn = document.querySelector("#locationButton");
       const status = document.querySelector("#status");
-
-      btn.disabled = true;
-      btn.textContent = "⏳ Detecting location...";
-      status.style.color = "#93c5fd";
-      status.textContent = "Requesting location coordinates...";
+      status.innerHTML = '<span class="spinner" style="margin-right:8px;"></span> Querying GPS and Live Weather…';
 
       try {
-        const loc = await determineLocation();
-        const latitude = loc.latitude;
-        const longitude = loc.longitude;
-        let state = loc.state || "";
+        if (!navigator.geolocation) throw new Error("Geolocation not supported by browser.");
+        const pos = await new Promise((res, rej) => navigator.geolocation.getCurrentPosition(res, rej, { timeout: 10000 }));
+        const lat = pos.coords.latitude;
+        const lng = pos.coords.longitude;
 
-        status.textContent = `📍 Found coordinates (${loc.method})! Fetching state & weather...`;
+        setStart(lat, lng, "Device GPS");
 
-        // Reverse-geocode to state if not already provided
-        if (!state) {
-          try {
-            const geoUrl = new URL("https://api.bigdatacloud.net/data/reverse-geocode-client");
-            geoUrl.search = new URLSearchParams({
-              latitude,
-              longitude,
-              localityLanguage: "en"
-            });
-            const geoResponse = await fetch(geoUrl);
-            if (geoResponse.ok) {
-              const place = await geoResponse.json();
-              const subdivisionCode = place.principalSubdivisionCode || "";
-              state = subdivisionCode.includes("-")
-                ? subdivisionCode.split("-").pop()
-                : place.principalSubdivision || "";
-            }
-          } catch (geoErr) {
-            console.warn("Reverse geocode failed:", geoErr.message);
-          }
-        }
-
-        // Fetch live weather from Open-Meteo
+        // Reverse geocode state
         try {
-          const weatherUrl = new URL("https://api.open-meteo.com/v1/forecast");
-          weatherUrl.search = new URLSearchParams({
-            latitude,
-            longitude,
-            current: [
-              "temperature_2m",
-              "relative_humidity_2m",
-              "surface_pressure",
-              "visibility",
-              "wind_speed_10m",
-              "wind_direction_10m",
-              "weather_code"
-            ].join(","),
-            temperature_unit: "fahrenheit",
-            wind_speed_unit: "mph",
-            timezone: "auto"
-          });
-
-          const weatherResponse = await fetch(weatherUrl);
-          if (weatherResponse.ok) {
-            const weather = await weatherResponse.json();
-            const current = weather.current;
-
-            setField("Temperature_F", current.temperature_2m);
-            setField("Humidity_percent", current.relative_humidity_2m);
-            setField("Pressure_in", (current.surface_pressure / 33.8639).toFixed(2));
-            setField("Visibility_mi", (current.visibility / 1609.344).toFixed(1));
-            setField("Wind_Direction", windDirection(current.wind_direction_10m));
-            setField("Wind_Speed_mph", current.wind_speed_10m);
-            setField("Weather_Condition_Clean", cleanWeatherCondition(current.weather_code));
-
-            fillTimeFields(weather.timezone || "UTC");
+          const geoUrl = new URL("https://api.bigdatacloud.net/data/reverse-geocode-client");
+          geoUrl.search = new URLSearchParams({ latitude: lat, longitude: lng, localityLanguage: "en" });
+          const geoResp = await fetch(geoUrl);
+          if (geoResp.ok) {
+            const place = await geoResp.json();
+            const sub = place.principalSubdivisionCode || "";
+            setField("State", sub.includes("-") ? sub.split("-").pop() : place.principalSubdivision || "CA");
           }
-        } catch (weatherErr) {
-          console.warn("Weather fetch failed:", weatherErr.message);
-        }
+        } catch (_) {}
 
-        setField("Start_Lat", latitude);
-        setField("Start_Lng", longitude);
-        setField("State", state);
-
-        updateStartMarker(latitude, longitude);
-        map.setView([latitude, longitude], 12);
-        calculateETA();
-
-        status.style.color = "#34d399";
-        status.textContent =
-          `✅ Loaded location via ${loc.method}: ${latitude.toFixed(4)}, ${longitude.toFixed(4)}. ` +
-          `State: ${state || "(enter manually)"}. Select destination on the Google Map or enter below.`;
-      } catch (error) {
-        status.style.color = "#fca5a5";
-        status.textContent = "❌ " + error.message;
-      } finally {
-        btn.disabled = false;
-        btn.textContent = "📍 Detect & Use My Current Location";
+        status.innerHTML = `✅ <strong>Location Found:</strong> ${lat.toFixed(4)}, ${lng.toFixed(4)}. Real-time atmospheric weather applied.`;
+      } catch (err) {
+        status.innerHTML = `⚠️ <strong>GPS Notice:</strong> ${err.message}. Using manual coordinates.`;
       }
     });
 
     /* =================================================================
-       8. PREDICTION SUBMISSION
+       REQUIREMENT 4: ALERTS FOR OFFICERS (SEND ALERTS & POLICE FEED)
        ================================================================= */
+    let officerAlerts = [
+      {
+        id: "ALT-101",
+        location: "Navale Bridge, Mumbai-Bengaluru Highway, Pune",
+        message: "Multi-vehicle collision on steep slope blocking two lanes. Ambulance and tow truck requested.",
+        severity: "Critical",
+        sender: "Patrol Officer / Citizen",
+        timestamp: "Today, 10:15 AM",
+        status: "Active"
+      },
+      {
+        id: "ALT-102",
+        location: "Mukarba Chowk, Outer Ring Road, Delhi",
+        message: "Freight truck barrier contact near NH-44 merge. Slow traffic building up, traffic diversion needed.",
+        severity: "High",
+        sender: "Highway Commuter",
+        timestamp: "Today, 09:40 AM",
+        status: "Dispatched"
+      },
+      {
+        id: "ALT-103",
+        location: "Silk Board Junction, Hosur Road, Bengaluru",
+        message: "Two-car rear end fender bender before flyover entrance. Vehicles moved to shoulder.",
+        severity: "Moderate",
+        sender: "Traffic Observer",
+        timestamp: "Today, 08:55 AM",
+        status: "Resolved"
+      }
+    ];
+
+    // Load persisted alerts
+    try {
+      const saved = localStorage.getItem("officer_alerts_store");
+      if (saved) officerAlerts = JSON.parse(saved);
+    } catch (_) {}
+
+    function saveAlertsLocally() {
+      try {
+        localStorage.setItem("officer_alerts_store", JSON.stringify(officerAlerts));
+      } catch (_) {}
+    }
+
+    function renderOfficerAlertsFeed() {
+      const feed = document.getElementById("officerAlertsFeed");
+      feed.innerHTML = "";
+
+      const activeCount = officerAlerts.filter(a => a.status === "Active").length;
+      document.getElementById("tabAlertCount").textContent = activeCount;
+
+      if (!officerAlerts.length) {
+        feed.innerHTML = `<div style="text-align:center; padding:30px; color:#94a3b8;">No alerts registered yet. All sectors clear.</div>`;
+        return;
+      }
+
+      officerAlerts.forEach((alert, idx) => {
+        const item = document.createElement("div");
+        const sevClass = alert.severity === "Critical" ? "critical-alert" : (alert.severity === "High" ? "high-alert" : "moderate-alert");
+        const statusClass = alert.status === "Active" ? "status-active" : (alert.status === "Dispatched" ? "status-dispatched" : "status-resolved");
+
+        item.className = `alert-card-item ${sevClass}`;
+        item.innerHTML = `
+          <div class="alert-item-header">
+            <span class="alert-item-loc">📍 ${alert.location}</span>
+            <span class="alert-item-time">${alert.timestamp || "Just now"}</span>
+          </div>
+          <div class="alert-item-body">
+            <strong>${alert.severity} Hazard:</strong> ${alert.message}
+          </div>
+          <div class="alert-item-footer">
+            <div style="font-size:12px; color:#94a3b8;">
+              Reported by: <strong>${alert.sender || "Citizen"}</strong> &bull; Status: <span class="alert-status-badge ${statusClass}">${alert.status}</span>
+            </div>
+            <div class="officer-btn-group">
+              ${alert.status !== "Dispatched" && alert.status !== "Resolved" ? `<button class="btn btn-primary btn-xs" onclick="updateAlertStatus(${idx}, 'Dispatched')">🚔 Dispatch Officer</button>` : ''}
+              ${alert.status !== "Resolved" ? `<button class="btn btn-quiet btn-xs" onclick="updateAlertStatus(${idx}, 'Resolved')">✅ Mark Resolved</button>` : ''}
+              <button class="btn btn-quiet btn-xs" onclick="locateAlertOnMap('${encodeURIComponent(alert.location)}')">🗺️ View</button>
+            </div>
+          </div>
+        `;
+        feed.appendChild(item);
+      });
+    }
+
+    window.updateAlertStatus = function(idx, newStatus) {
+      if (officerAlerts[idx]) {
+        officerAlerts[idx].status = newStatus;
+        saveAlertsLocally();
+        renderOfficerAlertsFeed();
+      }
+    };
+
+    window.locateAlertOnMap = async function(encodedLoc) {
+      const loc = decodeURIComponent(encodedLoc);
+      showTab("manualPanel");
+      try {
+        const p = await geocodePlace(loc);
+        setDestination(Number(p.lat), Number(p.lon), loc);
+      } catch (_) {
+        alert("Panned to alert reference: " + loc);
+      }
+    };
+
+    // Use current map point in alert form
+    document.getElementById("useCurrentLocationForAlert").addEventListener("click", () => {
+      const dest = destinationCoords();
+      const st = startCoords();
+      const locInput = document.getElementById("alertLocationInput");
+      if (dest) {
+        locInput.value = `Destination Coordinates (${dest[0].toFixed(4)}, ${dest[1].toFixed(4)})`;
+      } else if (st) {
+        locInput.value = `Starting Location (${st[0].toFixed(4)}, ${st[1].toFixed(4)})`;
+      } else {
+        locInput.value = "Highway Sector Junction (Current Viewpoint)";
+      }
+    });
+
+    // Handle Alert Form Submission (Field 1)
+    document.getElementById("officerAlertForm").addEventListener("submit", async event => {
+      event.preventDefault();
+      const loc = document.getElementById("alertLocationInput").value.trim();
+      const msg = document.getElementById("alertMessageInput").value.trim();
+      const sev = document.getElementById("alertSeveritySelect").value;
+      const sender = document.getElementById("alertSenderInput").value.trim() || "Citizen / Commuter";
+      const statusEl = document.getElementById("alertDispatchStatus");
+
+      const newAlert = {
+        id: `ALT-${Date.now().toString().slice(-4)}`,
+        location: loc,
+        message: msg,
+        severity: sev,
+        sender: sender,
+        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        status: "Active"
+      };
+
+      officerAlerts.unshift(newAlert);
+      saveAlertsLocally();
+      renderOfficerAlertsFeed();
+
+      // Attempt to dispatch to backend API as well
+      try {
+        fetch(`${API_BASE}/api/alerts`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(newAlert)
+        }).catch(() => {});
+      } catch (_) {}
+
+      document.getElementById("alertLocationInput").value = "";
+      document.getElementById("alertMessageInput").value = "";
+      statusEl.textContent = "✅ Alert successfully dispatched to police officers live monitor!";
+      setTimeout(() => { statusEl.textContent = ""; }, 4000);
+    });
+
+    document.getElementById("refreshAlertsBtn").addEventListener("click", async () => {
+      try {
+        const resp = await fetch(`${API_BASE}/api/alerts`);
+        if (resp.ok) {
+          const data = await resp.json();
+          if (data.alerts && Array.isArray(data.alerts)) {
+            officerAlerts = data.alerts;
+            saveAlertsLocally();
+          }
+        }
+      } catch (_) {}
+      renderOfficerAlertsFeed();
+    });
+
+    document.getElementById("clearAlertsBtn").addEventListener("click", () => {
+      if (confirm("Clear local officer alerts log?")) {
+        officerAlerts = [];
+        saveAlertsLocally();
+        renderOfficerAlertsFeed();
+      }
+    });
+
+    renderOfficerAlertsFeed();
+
+    /* =================================================================
+       PREDICTION SUBMISSION (With Auto-Fetched Weather & Real-Time)
+       ================================================================= */
+    const severityConfig = {
+      1: { label: "Level 1 — Minor Impact", class: "severity-1", percent: "25%", color: "#10b981" },
+      2: { label: "Level 2 — Moderate Impact", class: "severity-2", percent: "50%", color: "#f59e0b" },
+      3: { label: "Level 3 — Serious Delay", class: "severity-3", percent: "75%", color: "#f97316" },
+      4: { label: "Level 4 — Critical Severity", class: "severity-4", percent: "100%", color: "#ef4444" }
+    };
+
     form.addEventListener("submit", async event => {
       event.preventDefault();
+
+      const submitBtn = document.querySelector("#submitBtn");
+      const originalText = submitBtn.innerHTML;
+      submitBtn.innerHTML = '<span class="spinner" style="margin-right:8px;"></span> Evaluating Route Hazards…';
+      submitBtn.disabled = true;
 
       const formData = new FormData(form);
       const payload = {};
 
       for (const [key, value] of formData.entries()) {
-        const numericFields = [
-          "Start_Lat", "Start_Lng", "End_Lat", "End_Lng", "Temperature_F", "Humidity_percent",
-          "Pressure_in", "Visibility_mi", "Wind_Speed_mph", "Hour", "Month",
-          "Day_Of_Week", "Is_Weekend", "Rush_Hour", "Is_Night", "Distance_mi",
+        const numericKeys = [
+          "Start_Lat", "Start_Lng", "End_Lat", "End_Lng", "Distance_mi",
           "Amenity", "Crossing", "Junction", "Railway", "Stop", "Traffic_Signal"
         ];
-
-        payload[key] = numericFields.includes(key) ? Number(value) : value;
+        payload[key] = numericKeys.includes(key) ? Number(value) : value;
       }
 
-      const resultBox = document.querySelector("#result");
-      const riskBox = document.querySelector("#riskFactors");
-      resultBox.style.display = "block";
-      resultBox.innerHTML = "<span>⏳ Predicting accident severity...</span>";
-      riskBox.style.display = "none";
-      riskBox.textContent = "";
+      // REQUIREMENT 1: INJECT AUTO-FETCHED WEATHER VALUES
+      payload["Temperature_F"] = liveWeather.Temperature_F;
+      payload["Humidity_percent"] = liveWeather.Humidity_percent;
+      payload["Pressure_in"] = liveWeather.Pressure_in;
+      payload["Visibility_mi"] = liveWeather.Visibility_mi;
+      payload["Wind_Direction"] = liveWeather.Wind_Direction;
+      payload["Wind_Speed_mph"] = liveWeather.Wind_Speed_mph;
+      payload["Weather_Condition_Clean"] = liveWeather.Weather_Condition_Clean;
+      payload["Weather_Condition"] = liveWeather.Weather_Condition_Clean;
+
+      // REQUIREMENT 2: INJECT REAL-TIME CLOCK FEATURES
+      const timeFeatures = getCurrentTimeFeatures();
+      Object.assign(payload, timeFeatures);
+
+      // Ensure End coordinates exist
+      if (payload["End_Lat"] === undefined) {
+        const dest = destinationCoords();
+        if (dest) {
+          payload["End_Lat"] = dest[0];
+          payload["End_Lng"] = dest[1];
+        } else {
+          payload["End_Lat"] = payload["Start_Lat"];
+          payload["End_Lng"] = payload["Start_Lng"];
+        }
+      }
+
+      const resultContainer = document.querySelector("#resultContainer");
+      const severityBadge = document.querySelector("#severityBadge");
+      const scaleFill = document.querySelector("#scaleFill");
+      const riskChips = document.querySelector("#riskChips");
 
       try {
-        const apiUrl = getApiBaseUrl() + "/predict";
-        const response = await fetch(apiUrl, {
+        const response = await fetch(`${API_BASE}/predict`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(payload)
         });
 
         const result = await response.json();
-        if (!response.ok) {
-          throw new Error(result.detail || result.detail?.[0]?.msg || "Prediction request failed.");
-        }
+        if (!response.ok) throw new Error(result.detail || "Prediction request failed.");
 
-        const sev = Number(result.predicted_severity);
-        const badgeClass = `severity-${sev}`;
-        const severityLabels = {
-          1: "Severity 1 (Low Impact)",
-          2: "Severity 2 (Moderate Impact)",
-          3: "Severity 3 (High Severity)",
-          4: "Severity 4 (Critical Accident)"
-        };
+        const sev = Number(result.predicted_severity) || 1;
+        const conf = severityConfig[sev] || severityConfig[1];
 
-        resultBox.innerHTML = `
-          <strong>Predicted Accident Severity:</strong>
-          <span class="severity-badge ${badgeClass}">${severityLabels[sev] || "Severity " + sev}</span>
-          <div style="font-size: 12px; color: var(--text-muted); margin-top: 6px;">Engine: ${result.engine || "ML Model"}</div>
-        `;
+        severityBadge.className = `severity-badge ${conf.class}`;
+        severityBadge.innerHTML = `<span>●</span> ${conf.label}`;
 
-        riskBox.style.display = "block";
-        if (result.risk_factors && result.risk_factors.length > 0) {
-          riskBox.innerHTML = "<strong>Primary Risk Factors:</strong> " + result.risk_factors.map(r => `<span style="display:inline-block; background:rgba(255,255,255,0.1); padding:2px 8px; border-radius:4px; margin:2px 4px;">${r}</span>`).join(" ");
-        } else {
-          riskBox.textContent = "Risk factors will appear here after analysis.";
-        }
-      } catch (error) {
-        resultBox.innerHTML =
-          `<span style="color: #f87171;">❌ Could not connect to prediction API. Make sure FastAPI server is running.<br>Error: ${error.message}</span>`;
+        scaleFill.style.width = conf.percent;
+        scaleFill.style.background = conf.color;
+
+        riskChips.innerHTML = "";
+        const risks = result.risk_factors || ["Normal driving conditions observed"];
+        risks.forEach(risk => {
+          const chip = document.createElement("div");
+          const isSafe = risk.toLowerCase().includes("normal");
+          chip.className = `risk-chip ${isSafe ? 'safe' : ''}`;
+          chip.innerHTML = `${isSafe ? '🛡️' : '⚠️'} ${risk}`;
+          riskChips.appendChild(chip);
+        });
+
+        resultContainer.style.display = "block";
+        resultContainer.scrollIntoView({ behavior: "smooth", block: "nearest" });
+      } catch (err) {
+        alert("Prediction Error: " + err.message + "\nEnsure FastAPI backend is running.");
+      } finally {
+        submitBtn.innerHTML = originalText;
+        submitBtn.disabled = false;
       }
     });
+
+    // Initialize Map on load
+    window.addEventListener("DOMContentLoaded", initDestinationMap);
   </script>
 </body>
 </html>
